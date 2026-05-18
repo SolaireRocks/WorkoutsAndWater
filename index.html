@@ -193,6 +193,27 @@ body::before {
   padding: 8px 18px; cursor: pointer; transition: all 0.15s;
 }
 .save-btn:hover { background: var(--surface3); color: var(--text); }
+
+/* ACTIVITY EDITOR */
+.editor-head { display: grid; grid-template-columns: 48px 1fr 64px 1.3fr; gap: 8px; margin-bottom: 7px; padding: 0 2px; }
+.editor-head span { font-family: 'DM Mono', monospace; font-size: 9px; color: var(--text3); text-transform: uppercase; letter-spacing: 1px; }
+.editor-row { display: grid; grid-template-columns: 48px 1fr 64px 1.3fr; gap: 8px; align-items: center; margin-bottom: 8px; }
+.editor-input {
+  background: var(--bg); border: 1px solid var(--border); border-radius: 7px;
+  color: var(--text); font-size: 13px; font-family: 'Syne', sans-serif;
+  padding: 8px 10px; width: 100%; transition: border-color 0.15s;
+}
+.editor-input:focus { outline: none; border-color: var(--border2); }
+.editor-input.icon { text-align: center; padding: 8px 4px; }
+.editor-input.num { text-align: center; font-family: 'DM Mono', monospace; }
+@media (max-width: 600px) {
+  .editor-head { display: none; }
+  .editor-row { grid-template-columns: 44px 1fr 56px; grid-template-areas: "i n t" "l l l"; gap: 6px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+  .editor-input.icon { grid-area: i; }
+  .editor-input.j-name { grid-area: n; }
+  .editor-input.num { grid-area: t; }
+  .editor-input.j-lbl { grid-area: l; }
+}
 .comments-list { display: flex; flex-direction: column; gap: 7px; margin-top: 10px; max-height: 220px; overflow-y: auto; }
 .comment-bubble { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 9px 12px; }
 .comment-meta { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--text3); margin-bottom: 3px; }
@@ -365,6 +386,20 @@ body::before {
         </div>
       </div>
 
+      <!-- Edit activities -->
+      <div class="card">
+        <div class="section-label">Edit activities &amp; goals</div>
+        <div class="editor-head">
+          <span>Icon</span><span>Activity</span><span>Per&nbsp;wk</span><span>Description</span>
+        </div>
+        <div id="cat-editor"></div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <button class="save-btn" onclick="saveCats()">save activities</button>
+          <button class="save-btn" onclick="resetCats()">reset to defaults</button>
+          <span style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;">changes sync to her tracker instantly</span>
+        </div>
+      </div>
+
       <!-- Leave a comment -->
       <div class="card">
         <div class="section-label">Leave a comment for her</div>
@@ -404,12 +439,14 @@ const FB = {
 
 // ── CHANGE PASSWORDS HERE ──────────────────────────────────────────
 const PASSWORDS = {
-  'bunny2025': 'sub',    // her password → tracker view
-  'daddy2025': 'daddy',  // your password → dashboard + tracker
+  'panda': 'sub',    // her password → tracker view
+  'dad': 'daddy',  // your password → dashboard + tracker
 };
 // ──────────────────────────────────────────────────────────────────
 
-const CATS = [
+// Default activities — used until Daddy customizes them from the dashboard.
+// Once edited, the live config is stored in Firebase ('config/cats') and synced to both views.
+const DEFAULT_CATS = [
   { id:'workout',  icon:'🏃', name:'Workout',       target:3, lbl:'3× / week' },
   { id:'water',    icon:'💧', name:'Water',          target:7, lbl:'daily'     },
   { id:'vitamind', icon:'☀️', name:'Vitamin D',      target:7, lbl:'daily'     },
@@ -417,6 +454,7 @@ const CATS = [
   { id:'reading',  icon:'📖', name:'Reading',        target:7, lbl:'daily'     },
   { id:'help',     icon:'🤝', name:'Ask for Help',   target:2, lbl:'2× / week' },
 ];
+let CATS = DEFAULT_CATS.map(c=>({...c}));
 const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 
 const app = initializeApp(FB);
@@ -495,6 +533,12 @@ function startListening() {
   sync('syncing');
   onValue(ref(db,'weeks'), snap=>{ allData=snap.val()||{}; render(); sync('synced'); }, ()=>sync('error'));
   onValue(ref(db,'penalty'), snap=>{ penalties=snap.val()||0; render(); });
+  onValue(ref(db,'config/cats'), snap=>{
+    const v=snap.val();
+    const arr=Array.isArray(v)?v:(v&&typeof v==='object'?Object.values(v):null);
+    CATS=(arr&&arr.length)?arr.filter(Boolean).map(c=>({...c})):DEFAULT_CATS.map(c=>({...c}));
+    render();
+  });
 }
 
 async function writeWeek(wk, data) {
@@ -634,6 +678,56 @@ function renderComments(containerId, wk) {
   });
 }
 
+// ── ACTIVITY EDITOR (daddy only) ──
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function renderEditor() {
+  const c=document.getElementById('cat-editor');
+  c.innerHTML='';
+  CATS.forEach(cat=>{
+    const row=document.createElement('div');
+    row.className='editor-row';
+    row.dataset.id=cat.id;
+    row.innerHTML=
+      `<input class="editor-input icon j-icon" value="${esc(cat.icon)}" maxlength="3" aria-label="icon">`+
+      `<input class="editor-input j-name" value="${esc(cat.name)}" aria-label="activity name">`+
+      `<input class="editor-input num j-target" type="number" min="1" max="7" value="${parseInt(cat.target,10)||1}" aria-label="times per week">`+
+      `<input class="editor-input j-lbl" value="${esc(cat.lbl)}" placeholder="e.g. 3× / week" aria-label="description">`;
+    c.appendChild(row);
+  });
+}
+
+window.saveCats = async function() {
+  const rows=[...document.querySelectorAll('#cat-editor .editor-row')];
+  if(!rows.length) return;
+  const next=rows.map(r=>({
+    id: r.dataset.id,
+    icon: (r.querySelector('.j-icon').value.trim())||'•',
+    name: (r.querySelector('.j-name').value.trim())||'Activity',
+    target: Math.min(7, Math.max(1, parseInt(r.querySelector('.j-target').value,10)||1)),
+    lbl: r.querySelector('.j-lbl').value.trim()
+  }));
+  sync('syncing');
+  try {
+    await set(ref(db,'config/cats'), next);
+    CATS=next.map(c=>({...c}));
+    render();
+    sync('synced');
+    toast('activities saved', true);
+  } catch(e){ sync('error'); toast('save failed'); }
+};
+
+window.resetCats = async function() {
+  sync('syncing');
+  try {
+    await set(ref(db,'config/cats'), DEFAULT_CATS);
+    CATS=DEFAULT_CATS.map(c=>({...c}));
+    render();
+    sync('synced');
+    toast('reset to defaults', true);
+  } catch(e){ sync('error'); toast('save failed'); }
+};
+
 // ── MAIN RENDER ──
 function render() {
   const wk=weekKey(currentWeekStart);
@@ -644,7 +738,7 @@ function render() {
   document.getElementById('t-week-label').textContent=fmt(currentWeekStart)+' – '+fmt(dates[6]);
   document.getElementById('t-done').textContent=td;
   document.getElementById('t-total').textContent=tt;
-  document.getElementById('t-cats').textContent=cd+'/6';
+  document.getElementById('t-cats').textContent=cd+'/'+CATS.length;
   document.getElementById('t-pct').textContent=pct+'%';
   document.getElementById('t-pen').textContent=penalties;
   renderGrid('t-grid', false);
@@ -672,6 +766,10 @@ function render() {
   renderGrid('d-grid', true);
   renderProgress('d-prog','d-overall-bar','d-overall-pct',wk);
   renderComments('d-comments', wk);
+
+  // Don't rebuild the editor while Daddy is typing in it
+  const ed=document.getElementById('cat-editor');
+  if(!ed.contains(document.activeElement)) renderEditor();
 
   // History
   const hist=document.getElementById('d-history');
