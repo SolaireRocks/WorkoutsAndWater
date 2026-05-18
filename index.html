@@ -193,6 +193,13 @@ body::before {
   padding: 8px 18px; cursor: pointer; transition: all 0.15s;
 }
 .save-btn:hover { background: var(--surface3); color: var(--text); }
+.notes-display {
+  width: 100%; background: var(--bg); border: 1px solid var(--border);
+  border-radius: 8px; color: var(--text2); font-size: 13px; font-family: 'Syne', sans-serif;
+  padding: 10px 12px; margin-top: 9px; min-height: 60px; white-space: pre-wrap;
+  line-height: 1.5; word-break: break-word;
+}
+.notes-display.empty { color: var(--text3); font-family: 'DM Mono', monospace; font-size: 12px; }
 
 /* ACTIVITY EDITOR */
 .editor-head { display: grid; grid-template-columns: 48px 1fr 64px 1.3fr; gap: 8px; margin-bottom: 7px; padding: 0 2px; }
@@ -215,7 +222,15 @@ body::before {
   .editor-input.j-lbl { grid-area: l; }
 }
 .comments-list { display: flex; flex-direction: column; gap: 7px; margin-top: 10px; max-height: 220px; overflow-y: auto; }
-.comment-bubble { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 9px 12px; }
+.comment-bubble { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 9px 12px; position: relative; }
+.comment-bubble.deletable { padding-right: 34px; }
+.comment-del {
+  position: absolute; top: 7px; right: 8px;
+  background: transparent; border: none; color: var(--text3);
+  font-size: 14px; line-height: 1; cursor: pointer; padding: 3px 6px;
+  border-radius: 6px; transition: all 0.15s;
+}
+.comment-del:hover { color: var(--red); background: var(--red-dim); }
 .comment-meta { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--text3); margin-bottom: 3px; }
 .comment-text { font-size: 13px; color: var(--text2); line-height: 1.5; }
 .comment-input-row { display: flex; gap: 8px; margin-top: 10px; }
@@ -400,6 +415,12 @@ body::before {
         </div>
       </div>
 
+      <!-- Her notes (read-only) -->
+      <div class="card">
+        <div class="section-label">Her notes for this week</div>
+        <div class="notes-display" id="d-notes-display"></div>
+      </div>
+
       <!-- Leave a comment -->
       <div class="card">
         <div class="section-label">Leave a comment for her</div>
@@ -425,7 +446,7 @@ body::before {
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getDatabase, ref, onValue, set, push } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+import { getDatabase, ref, onValue, set, push, remove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
 const FB = {
   apiKey: "AIzaSyDAEKNr-QW3OTMMbwrfM-iu4IQ9ir25hHw",
@@ -661,22 +682,36 @@ function renderProgress(containerId, overallBarId, overallPctId, wk) {
 }
 
 // ── RENDER COMMENTS ──
-function renderComments(containerId, wk) {
+function renderComments(containerId, wk, deletable) {
   const d=getWeekData(wk);
   const list=document.getElementById(containerId);
   list.innerHTML='';
-  const comments=d.comments?Object.values(d.comments).sort((a,b)=>a.ts-b.ts):[];
+  const comments=d.comments
+    ? Object.entries(d.comments).map(([id,c])=>({id,...c})).sort((a,b)=>a.ts-b.ts)
+    : [];
   if(comments.length===0){
     list.innerHTML='<div style="font-size:12px;color:var(--text3);font-family:\'DM Mono\',monospace;">no comments yet this week</div>';
     return;
   }
   comments.forEach(c=>{
-    const b=document.createElement('div'); b.className='comment-bubble';
+    const b=document.createElement('div');
+    b.className='comment-bubble'+(deletable?' deletable':'');
     const dt=new Date(c.ts).toLocaleDateString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
-    b.innerHTML=`<div class="comment-meta">${c.author} · ${dt}</div><div class="comment-text">${c.text}</div>`;
+    b.innerHTML=`<div class="comment-meta">${esc(c.author)} · ${dt}</div><div class="comment-text">${esc(c.text)}</div>`
+      +(deletable?`<button class="comment-del" title="Delete this comment" onclick="deleteComment('${esc(c.id)}')">✕</button>`:'');
     list.appendChild(b);
   });
 }
+
+window.deleteComment = async function(id) {
+  if(!confirm('Delete this comment? She will no longer see it.')) return;
+  const wk=weekKey(currentWeekStart);
+  sync('syncing');
+  try {
+    await remove(ref(db,'weeks/'+wk+'/comments/'+id));
+    sync('synced'); toast('comment deleted', true);
+  } catch(e){ sync('error'); toast('delete failed'); }
+};
 
 // ── ACTIVITY EDITOR (daddy only) ──
 function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -765,7 +800,12 @@ function render() {
 
   renderGrid('d-grid', true);
   renderProgress('d-prog','d-overall-bar','d-overall-pct',wk);
-  renderComments('d-comments', wk);
+  renderComments('d-comments', wk, true);
+
+  const herNotes=(getWeekData(wk).notes||'').trim();
+  const nd=document.getElementById('d-notes-display');
+  if(herNotes){ nd.textContent=herNotes; nd.className='notes-display'; }
+  else { nd.textContent='no notes from her this week'; nd.className='notes-display empty'; }
 
   // Don't rebuild the editor while Daddy is typing in it
   const ed=document.getElementById('cat-editor');
