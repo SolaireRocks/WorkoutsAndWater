@@ -285,10 +285,14 @@ body::before {
 .footer { text-align: center; margin-top: 40px; font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text3); }
 @media (max-width: 600px) {
   .stats-row { grid-template-columns: repeat(2, 1fr); }
-  .tracker-grid { grid-template-columns: 100px repeat(7, 1fr); }
+  /* Let the grid keep usable column widths and scroll sideways
+     so Sat/Sun are never clipped on narrow Android screens. */
+  .tracker-card { overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; }
+  .tracker-grid { grid-template-columns: 118px repeat(7, minmax(46px, 1fr)); min-width: 470px; }
   .g-cell.row-lbl { padding-left: 7px; gap: 5px; }
-  .cat-name { font-size: 10px; }
-  .cat-tlbl { display: none; }
+  .cat-name { font-size: 11px; line-height: 1.2; }
+  /* Keep the "3× / week" style sub-label visible on iPhone */
+  .cat-tlbl { display: block; font-size: 9px; line-height: 1.25; }
 }
 </style>
 </head>
@@ -458,11 +462,29 @@ const FB = {
   databaseURL: "https://workoutandwater-default-rtdb.firebaseio.com"
 };
 
-// ── CHANGE PASSWORDS HERE ──────────────────────────────────────────
-const PASSWORDS = {
-  'panda': 'sub',    // her password → tracker view
-  'dad': 'daddy',  // your password → dashboard + tracker
+// ── PASSWORDS ──────────────────────────────────────────────────────
+// Passwords are NOT stored here in plain text anymore. Each entry below
+// is a salted SHA-256 hash of the real password, so viewing the page
+// source no longer reveals it. This raises the bar against someone who
+// just stumbles in — it is not bank-grade (the Firebase rules are what
+// truly guard the data), but the passwords are no longer readable.
+//
+// To change a password: open this page, open the browser console
+// (F12 → Console), run  await hashPw('your-new-password')  and paste
+// the printed hash next to the matching role below.
+const PW_SALT = 'ww::8f3a::';
+const PW_HASHES = {
+  // her password → tracker view
+  '940fd694e37a77d79a9977b365bb11059d0a8a07e31207839fed1f9d9d6a0660': 'sub',
+  // your password → dashboard + tracker
+  'f6d487cfa2e395dc2ccdc13d251de4fab64b7c6a52c321f2e25c14189ae20793': 'daddy',
 };
+async function hashPw(pw) {
+  const buf = await crypto.subtle.digest('SHA-256',
+    new TextEncoder().encode(PW_SALT + pw));
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+}
+window.hashPw = hashPw;
 // ──────────────────────────────────────────────────────────────────
 
 // Default activities — used until Daddy customizes them from the dashboard.
@@ -523,24 +545,35 @@ function sync(s) {
 }
 
 // ── LOGIN ──
-window.doLogin = function() {
-  const pw=document.getElementById('pw-input').value.trim();
-  const r=PASSWORDS[pw];
-  if (!r) { document.getElementById('login-error').textContent='incorrect password'; return; }
-  role=r;
+const LS_KEY = 'ww-session-role';
+
+function enterApp(r) {
+  role = r;
   document.getElementById('login-screen').style.display='none';
   document.getElementById('app').style.display='block';
   if (role==='daddy') {
     document.getElementById('tab-dash').style.display='';
     switchView('dashboard');
   } else {
+    document.getElementById('tab-dash').style.display='none';
     switchView('tracker');
   }
   startListening();
+}
+
+window.doLogin = async function() {
+  const pw=document.getElementById('pw-input').value.trim();
+  if(!pw) return;
+  let r=null;
+  try { r = PW_HASHES[await hashPw(pw)] || null; } catch(e){ r=null; }
+  if (!r) { document.getElementById('login-error').textContent='incorrect password'; return; }
+  try { localStorage.setItem(LS_KEY, r); } catch(e){}
+  enterApp(r);
 };
 document.getElementById('pw-input').addEventListener('keydown',e=>{ if(e.key==='Enter') window.doLogin(); });
 
 window.doLogout = function() {
+  try { localStorage.removeItem(LS_KEY); } catch(e){}
   role=null; allData={};
   document.getElementById('login-screen').style.display='flex';
   document.getElementById('app').style.display='none';
@@ -837,6 +870,13 @@ function render() {
 }
 
 window.render=render;
+
+// Stay signed in across reloads until "logout" is tapped.
+(function restoreSession(){
+  let saved=null;
+  try { saved=localStorage.getItem(LS_KEY); } catch(e){}
+  if (saved==='sub' || saved==='daddy') enterApp(saved);
+})();
 </script>
 </body>
 </html>

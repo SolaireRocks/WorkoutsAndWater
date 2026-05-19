@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell($salt='ww::8f3a::'; foreach\\($p in @\\('panda','dad'\\)\\){ $h=[System.BitConverter]::ToString\\(\\(New-Object System.Security.Cryptography.SHA256Managed\\).ComputeHash\\([System.Text.Encoding]::UTF8.GetBytes\\($salt+$p\\)\\)\\).Replace\\('-',''\\).ToLower\\(\\); \"$p => $h\" })"
+    ]
+  }
+}
