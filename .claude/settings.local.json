@@ -1,7 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "PowerShell($salt='ww::8f3a::'; foreach\\($p in @\\('panda','dad'\\)\\){ $h=[System.BitConverter]::ToString\\(\\(New-Object System.Security.Cryptography.SHA256Managed\\).ComputeHash\\([System.Text.Encoding]::UTF8.GetBytes\\($salt+$p\\)\\)\\).Replace\\('-',''\\).ToLower\\(\\); \"$p => $h\" })"
+      "PowerShell($salt='ww::8f3a::'; foreach\\($p in @\\('panda','dad'\\)\\){ $h=[System.BitConverter]::ToString\\(\\(New-Object System.Security.Cryptography.SHA256Managed\\).ComputeHash\\([System.Text.Encoding]::UTF8.GetBytes\\($salt+$p\\)\\)\\).Replace\\('-',''\\).ToLower\\(\\); \"$p => $h\" })",
+      "Bash(node --check index.html)",
+      "Bash(awk '/<script type=\"module\">/{f=1;next} /<\\\\/script>/{f=0} f' index.html)",
+      "Bash(node --check /tmp/ww.mjs)"
     ]
   }
 }

@@ -272,6 +272,47 @@ body::before {
 .hmb-fill.full { background: var(--green); }
 .hmb-cnt { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--text3); min-width: 28px; text-align: right; }
 
+/* ACHIEVEMENTS */
+#achievements-view { display: none; }
+#achievements-view.active { display: block; }
+.ach-summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; }
+.ach-group { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 6px 16px 12px; margin-bottom: 14px; }
+.ach-group-title { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text2); text-transform: uppercase; letter-spacing: 1px; padding: 12px 0 4px; }
+.ach-item { display: grid; grid-template-columns: 34px 1fr auto; gap: 12px; align-items: center; padding: 12px 0; border-top: 1px solid var(--border); }
+.ach-item.first { border-top: none; }
+.ach-ic { font-size: 20px; text-align: center; }
+.ach-nm { font-size: 13px; font-weight: 500; color: var(--text); }
+.ach-item.earned .ach-nm { color: var(--green); }
+.ach-ds { font-size: 11px; color: var(--text3); margin-top: 2px; line-height: 1.4; }
+.ach-rt { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.ach-pt { font-family: 'DM Mono', monospace; font-size: 13px; color: var(--gold); min-width: 36px; text-align: right; }
+.ach-bdg { font-family: 'DM Mono', monospace; font-size: 10px; padding: 4px 9px; border-radius: 20px; white-space: nowrap; border: 1px solid var(--border); color: var(--text3); }
+.ach-bdg.auto { border-style: dashed; }
+.ach-bdg.pend { color: var(--gold); border-color: #5a4a20; background: rgba(240,192,96,0.08); }
+.ach-bdg.conf { color: var(--green); border-color: var(--green-border); background: var(--green-dim); }
+.ach-btn { font-family: 'DM Mono', monospace; font-size: 10px; padding: 6px 11px; border-radius: 7px; cursor: pointer; border: 1px solid var(--border); background: var(--surface2); color: var(--text2); transition: all .15s; white-space: nowrap; }
+.ach-btn:hover { background: var(--surface3); color: var(--text); }
+.ach-btn.go { border-color: var(--accent); background: var(--accent-dim); color: var(--text); }
+.ach-btn.ok { border-color: var(--green-border); background: var(--green-dim); color: var(--green); }
+.ach-btn.warn { border-color: var(--red-border); color: var(--red); }
+.confirm-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; background: var(--accent-dim); border: 1px solid var(--accent); border-radius: 12px; padding: 13px 16px; margin-bottom: 14px; }
+.confirm-bar .cb-txt { font-size: 12px; color: var(--text2); }
+.store-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+.store-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+.store-card.afford { border-color: var(--green-border); }
+.store-nm { font-size: 13px; font-weight: 600; color: var(--text); }
+.store-ds { font-size: 11px; color: var(--text3); line-height: 1.45; flex: 1; }
+.store-ft { display: flex; align-items: center; justify-content: space-between; margin-top: 2px; }
+.store-cost { font-family: 'DM Mono', monospace; font-size: 14px; color: var(--gold); }
+.redeem-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 0; border-top: 1px solid var(--border); font-size: 12px; color: var(--text2); }
+.redeem-row.first { border-top: none; }
+@media (max-width: 600px) {
+  .ach-summary { grid-template-columns: repeat(2, 1fr); }
+  .store-grid { grid-template-columns: 1fr; }
+  .ach-item { grid-template-columns: 28px 1fr; }
+  .ach-rt { grid-column: 1 / -1; justify-content: flex-start; }
+}
+
 /* TOAST */
 .toast {
   position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px);
@@ -320,6 +361,7 @@ body::before {
         &nbsp;
         <button class="nav-tab active" id="tab-tracker" onclick="switchView('tracker')">My Tracker</button>
         <button class="nav-tab" id="tab-dash" onclick="switchView('dashboard')" style="display:none">Dashboard</button>
+        <button class="nav-tab" id="tab-ach" onclick="switchView('achievements')">🏆 Achievements</button>
         <button class="logout-btn" onclick="doLogout()">logout</button>
       </div>
     </nav>
@@ -442,6 +484,38 @@ body::before {
       </div>
     </div>
 
+    <!-- ACHIEVEMENTS VIEW -->
+    <div id="achievements-view">
+      <div class="week-nav-row">
+        <div style="font-size:15px;font-weight:500;color:var(--text2);">Achievements</div>
+        <div class="week-controls">
+          <button class="nav-btn" onclick="changeWeek(-1)">&#8249;</button>
+          <div class="week-label" id="a-week-label"></div>
+          <button class="nav-btn" onclick="changeWeek(1)">&#8250;</button>
+        </div>
+      </div>
+      <div class="ach-summary">
+        <div class="stat-card"><div class="stat-label">Points Balance</div><div class="stat-val" id="a-balance" style="color:var(--gold)">0</div><div class="stat-sub">spendable</div></div>
+        <div class="stat-card"><div class="stat-label">Earned</div><div class="stat-val" id="a-earned">0</div><div class="stat-sub">all-time</div></div>
+        <div class="stat-card"><div class="stat-label">Pending</div><div class="stat-val" id="a-pending">0</div><div class="stat-sub">this week</div></div>
+        <div class="stat-card"><div class="stat-label">Redeemed</div><div class="stat-val" id="a-spent">0</div><div class="stat-sub">total spent</div></div>
+      </div>
+      <div id="a-confirmbar"></div>
+      <div id="a-list"></div>
+      <div class="ach-group">
+        <div class="ach-group-title" id="a-month-title">Monthly Challenges</div>
+        <div id="a-month"></div>
+      </div>
+      <div class="card">
+        <div class="section-label">Rewards store</div>
+        <div class="store-grid" id="a-store"></div>
+      </div>
+      <div class="card">
+        <div class="section-label">Redemption history</div>
+        <div id="a-redeems"></div>
+      </div>
+    </div>
+
     <div class="footer">workouts &amp; water &mdash; synced with firebase</div>
   </div>
 </div>
@@ -500,13 +574,69 @@ const DEFAULT_CATS = [
 let CATS = DEFAULT_CATS.map(c=>({...c}));
 const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 
+// ── ACHIEVEMENTS ───────────────────────────────────────────────────
+// Points she has already earned before this ledger started. The live
+// balance = STARTING_POINTS + confirmed achievements − redeemed rewards.
+const STARTING_POINTS = 295;
+// type 'auto'  → computed from the tracker sheet (rule), auto-earned for the week
+// type 'manual'→ real-life; she taps "Mark done", Daddy confirms
+// group 'month'→ persistent monthly challenge (does not reset weekly)
+const ACHIEVEMENTS = [
+  // Vitamins & Water
+  { id:'sunshine_pill',   group:'vw', type:'auto',   rule:'vitd1',  icon:'☀️', points:5,   name:'Sunshine Pill',   desc:'Taking your Vitamin D dose for the day', crit:'1 daily dose' },
+  { id:'sunshine_streak', group:'vw', type:'auto',   rule:'vitd7',  icon:'🌅', points:75,  name:'Sunshine Streak', desc:'Vitamin D every day for a full week', crit:'7 days' },
+  { id:'hydro_girl',      group:'vw', type:'auto',   rule:'water1', icon:'💧', points:5,   name:'Hydro Girl',      desc:'Hitting your daily water goal', crit:'daily goal met' },
+  { id:'the_camel',       group:'vw', type:'auto',   rule:'water7', icon:'🐫', points:75,  name:'The Camel',       desc:'Hitting the water goal for a full week', crit:'7 days' },
+  { id:'glow_up',         group:'vw', type:'auto',   rule:'glow',   icon:'✨', points:10,  name:'Glow Up',         desc:'Vitamin D AND water on the same day', crit:'both, 1 day' },
+  { id:'perfect_week_vw', group:'vw', type:'auto',   rule:'pvw',    icon:'🌟', points:75,  name:'Perfect Week (Vitamins & Water)', desc:'Water and Vitamin D every day this week', crit:'7 days' },
+  // Workouts & Outdoors
+  { id:'sweat_session',     group:'wo', type:'auto',   rule:'wo1',  icon:'💪', points:20,  name:'Sweat Session',       desc:'Completing a strength training workout', crit:'1 workout' },
+  { id:'bendy_girl',        group:'wo', type:'manual',              icon:'🧘', points:15,  name:'Bendy Girl',          desc:'20+ min stretching, yoga, or mobility', crit:'1 session' },
+  { id:'consistency_bonus', group:'wo', type:'auto',   rule:'wo3',  icon:'🔁', points:50,  name:'The Consistency Bonus', desc:'Working out 3 times in one week', crit:'3 days' },
+  { id:'beast_mode',        group:'wo', type:'auto',   rule:'wo5',  icon:'🔥', points:75,  name:'Beast Mode',          desc:'Working out 5 times in one week', crit:'5 days' },
+  { id:'sunset_workout',    group:'wo', type:'manual',              icon:'🌇', points:25,  name:'Sunset Workout',      desc:'Finish a workout after dinner', crit:'1 evening workout' },
+  { id:'depression_buster', group:'wo', type:'manual',              icon:'🌧️', points:25,  name:'Depression Buster',   desc:'Working out even on a hard / low day', crit:'1 hard-day workout' },
+  { id:'free_vitamin_d',    group:'wo', type:'manual',              icon:'🚶', points:30,  name:'Free Vitamin D',      desc:'Walk outside — at least to the pond and back', crit:'1 walk' },
+  { id:'better_coat',       group:'wo', type:'manual',              icon:'🧥', points:50,  name:'Better Wear a Coat!', desc:'Walk outside when it’s 30°F or colder', crit:'1 cold walk' },
+  // Asking for Help & Communication
+  { id:'squeaky_wheel',   group:'help', type:'auto',   rule:'help1', icon:'🛞', points:15, name:'The Squeaky Wheel',  desc:'Asking for help with a small task', crit:'1 instance' },
+  { id:'burden_sharer',   group:'help', type:'manual',               icon:'🫂', points:30, name:'Burden Sharer',      desc:'Asking Daddy for help with a stressful decision', crit:'1 instance' },
+  { id:'tactical_retreat',group:'help', type:'manual',               icon:'🚪', points:50, name:'The Tactical Retreat', desc:'Walking away from a frustrating task before melting down', crit:'1 reset' },
+  { id:'voice_of_reason', group:'help', type:'auto',   rule:'help3', icon:'📣', points:50, name:'Voice of Reason',    desc:'Asking for help 3 separate times in one week', crit:'3 instances' },
+  { id:'direct_comms',    group:'help', type:'manual',               icon:'🗣️', points:25, name:'Direct Comms',       desc:'Saying "I am overwhelmed" / "I need reassurance" without hinting', crit:'clear comms' },
+  // Body & Confidence
+  { id:'reflection_perfection', group:'body', type:'manual', icon:'🪞', points:25, name:'Reflection Perfection', desc:'Mirror (lingerie/nude) + 3 nice things', crit:'2 min / 3 compliments' },
+  { id:'acceptance_speech',     group:'body', type:'manual', icon:'🎤', points:15, name:'The Acceptance Speech', desc:'Accept a compliment with just "Thank you" — no deflecting', crit:'1 clean acceptance' },
+  { id:'no_coverup',            group:'body', type:'manual', icon:'🔓', points:50, name:'The "No Cover-Up" Zone', desc:'Sitting around naked for one hour', crit:'1 hour' },
+  { id:'daddy_lens',            group:'body', type:'manual', icon:'📷', points:25, name:'The Daddy Lens',       desc:'Find ONE thing you like in a photo Daddy took — no deleting', crit:'no deleting/insulting' },
+  { id:'clothing_brave',        group:'body', type:'manual', icon:'👗', points:35, name:'Clothing Brave',       desc:'Wear an item you avoid, after Daddy says it looks good', crit:'1 hour' },
+  { id:'low_battery',           group:'body', type:'manual', icon:'🔋', points:40, name:'The Low Battery Signal', desc:'Say "I am overstimulated" / "yellow zone" before snapping', crit:'early status' },
+  { id:'mantra',                group:'body', type:'manual', icon:'🧎', points:15, name:'The Mantra',           desc:'Positive affirmation in the mirror ×5', crit:'5 reps' },
+  // Monthly Challenges (persistent — claimed & confirmed per calendar month)
+  { id:'pm_vit',      group:'month', type:'manual', icon:'🗓️', points:150, name:'Perfect Month (Vitamins)', desc:'Didn’t miss a single Vitamin D dose all month', crit:'100% month' },
+  { id:'pm_water',    group:'month', type:'manual', icon:'🌊', points:200, name:'Perfect Month (Water)',    desc:'Hit your water every day for the month', crit:'100% month' },
+  { id:'pm_workout',  group:'month', type:'manual', icon:'🏋️', points:150, name:'Perfect Month (Workout)',  desc:'Hit weekly workout goals all month', crit:'100% month' },
+  { id:'pm_trifecta', group:'month', type:'manual', icon:'👑', points:300, name:'Perfect Month (Trifecta)', desc:'Workout + water + Vitamin D every week all month', crit:'100% month' },
+];
+const REWARDS = [
+  { id:'r_task',  cost:100,  name:'Daddy Handles It',        desc:'Redeemable for ONE dreaded task (making a phone call, etc.)' },
+  { id:'r_res1',  cost:300,  name:'The Reservoir (Lvl 1)',   desc:'Daddy agrees not to masturbate for 3 days.' },
+  { id:'r_amz_s', cost:400,  name:'Amazon Wishlist (Small)', desc:'Daddy buys one item from your list (under $20).' },
+  { id:'r_amz_l', cost:750,  name:'Amazon Wishlist (Large)', desc:'Daddy buys one item from your list (under $50).' },
+  { id:'r_res2',  cost:800,  name:'The Reservoir (Lvl 2)',   desc:'Daddy agrees not to masturbate for a full week.' },
+  { id:'r_fit',   cost:1400, name:'Fit Check',               desc:'We go to the mall and buy you an outfit (under $100 — more if it’s sexy enough).' },
+  { id:'r_jewel', cost:3000, name:'The Bloodiest…',     desc:'Pick out a piece of jewelry that Daddy will buy for you (under $250).' },
+];
+
 const app = initializeApp(FB);
 const db  = getDatabase(app);
 
 let role = null;
 let currentWeekStart = getWeekStart(new Date());
-let allData   = {};   // wk → { checks, notes, comments }
+let allData   = {};   // wk → { checks, notes, comments, ach }
 let penalties = 0;
+let monthsData  = {};  // "YYYY-MM" → { achId: { claimed, confirmed } }
+let redemptions = {};  // pushId → { name, cost, ts }
 
 // ── UTILS ──
 function getWeekStart(d) {
@@ -593,6 +723,8 @@ function startListening() {
     CATS=(arr&&arr.length)?arr.filter(Boolean).map(c=>({...c})):DEFAULT_CATS.map(c=>({...c}));
     render();
   });
+  onValue(ref(db,'months'),      snap=>{ monthsData=snap.val()||{};  render(); });
+  onValue(ref(db,'redemptions'), snap=>{ redemptions=snap.val()||{}; render(); });
 }
 
 async function writeWeek(wk, data) {
@@ -603,10 +735,12 @@ async function writeWeek(wk, data) {
 
 // ── INTERACTIONS ──
 window.switchView = function(v) {
-  document.getElementById('tracker-view').classList.toggle('active', v==='tracker');
-  document.getElementById('dashboard-view').classList.toggle('active', v==='dashboard');
+  ['tracker','dashboard','achievements'].forEach(name=>{
+    document.getElementById(name+'-view').classList.toggle('active', v===name);
+  });
   document.getElementById('tab-tracker').classList.toggle('active', v==='tracker');
   document.getElementById('tab-dash').classList.toggle('active', v==='dashboard');
+  document.getElementById('tab-ach').classList.toggle('active', v==='achievements');
   render();
 };
 window.changeWeek = function(dir) {
@@ -815,6 +949,8 @@ function render() {
   if(ta!==document.activeElement) ta.value=getWeekData(wk).notes||'';
   renderComments('t-comments', wk);
 
+  renderAchievements();
+
   if(role!=='daddy') return;
 
   // — DASHBOARD —
@@ -865,6 +1001,232 @@ function render() {
         html+=`<div class="hmb-row"><span class="hmb-name">${cat.icon} ${cat.name}</span><div class="hmb-track"><div class="hmb-fill${cnt>=cat.target?' full':''}" style="width:${pb}%"></div></div><span class="hmb-cnt">${cnt}/${cat.target}</span></div>`;
       });
       block.innerHTML=html; hist.appendChild(block);
+    });
+  }
+}
+
+// ── ACHIEVEMENTS LOGIC ─────────────────────────────────────────────
+function ymOf(ws){ return ws.getFullYear()+'-'+String(ws.getMonth()+1).padStart(2,'0'); }
+function monthLabel(ws){ return ws.toLocaleDateString('en-US',{month:'long',year:'numeric'}); }
+function achArr(d,id){ return (d.checks&&d.checks[id])?d.checks[id]:[]; }
+function achCnt(d,id){ return achArr(d,id).filter(Boolean).length; }
+
+// Is an auto achievement earned, based purely on this week's tracker sheet?
+function autoEarned(rule,d){
+  switch(rule){
+    case 'vitd1':  return achCnt(d,'vitamind')>=1;
+    case 'vitd7':  return achCnt(d,'vitamind')>=7;
+    case 'water1': return achCnt(d,'water')>=1;
+    case 'water7': return achCnt(d,'water')>=7;
+    case 'glow':   { const w=achArr(d,'water'), v=achArr(d,'vitamind'); return DAYS.some((_,i)=>w[i]&&v[i]); }
+    case 'pvw':    { const w=achArr(d,'water'), v=achArr(d,'vitamind'); return DAYS.every((_,i)=>w[i]&&v[i]); }
+    case 'wo1':    return achCnt(d,'workout')>=1;
+    case 'wo3':    return achCnt(d,'workout')>=3;
+    case 'wo5':    return achCnt(d,'workout')>=5;
+    case 'help1':  return achCnt(d,'help')>=1;
+    case 'help3':  return achCnt(d,'help')>=3;
+  }
+  return false;
+}
+function weekAchSt(wk){ return (allData[wk]&&allData[wk].ach)||{}; }
+function isEarned(a,wk){
+  if(a.group==='month') return false;
+  if(a.type==='auto') return autoEarned(a.rule,getWeekData(wk));
+  const st=weekAchSt(wk)[a.id]; return !!(st&&st.claimed);
+}
+function calcPoints(){
+  let confirmed=0;
+  Object.keys(allData).forEach(wk=>{
+    const ach=(allData[wk]&&allData[wk].ach)||{};
+    ACHIEVEMENTS.forEach(a=>{ if(a.group!=='month' && ach[a.id]&&ach[a.id].confirmed) confirmed+=a.points; });
+  });
+  Object.keys(monthsData).forEach(ym=>{
+    const md=monthsData[ym]||{};
+    ACHIEVEMENTS.forEach(a=>{ if(a.group==='month' && md[a.id]&&md[a.id].confirmed) confirmed+=a.points; });
+  });
+  let spent=0;
+  Object.values(redemptions||{}).forEach(r=>{ spent+=(+(r&&r.cost)||0); });
+  const earned=STARTING_POINTS+confirmed;
+  return { earned, spent, balance:earned-spent, confirmed };
+}
+
+function ensureWeekAch(wk){
+  if(!allData[wk]) allData[wk]=emptyWeek();
+  if(!allData[wk].ach) allData[wk].ach={};
+}
+window.subClaim = async function(id){
+  if(role==='daddy') return;
+  const wk=weekKey(currentWeekStart); ensureWeekAch(wk);
+  const cur=allData[wk].ach[id]||{};
+  const claimed=!cur.claimed;
+  allData[wk].ach[id]={...cur, claimed, confirmed: claimed?cur.confirmed:false};
+  render(); await writeWeek(wk, allData[wk]);
+};
+window.domConfirm = async function(id){
+  if(role!=='daddy') return;
+  const wk=weekKey(currentWeekStart); ensureWeekAch(wk);
+  const cur=allData[wk].ach[id]||{};
+  const confirmed=!cur.confirmed;
+  allData[wk].ach[id]={...cur, confirmed, claimed: confirmed?true:cur.claimed};
+  render(); await writeWeek(wk, allData[wk]);
+};
+window.confirmWeekAll = async function(){
+  if(role!=='daddy') return;
+  const wk=weekKey(currentWeekStart); ensureWeekAch(wk);
+  ACHIEVEMENTS.forEach(a=>{
+    if(a.group==='month') return;
+    if(isEarned(a,wk)){ const cur=allData[wk].ach[a.id]||{}; allData[wk].ach[a.id]={...cur, claimed:true, confirmed:true}; }
+  });
+  render(); await writeWeek(wk, allData[wk]); toast('week confirmed', true);
+};
+window.subClaimMonth = async function(id){
+  if(role==='daddy') return;
+  const ym=ymOf(currentWeekStart);
+  const cur=(monthsData[ym]&&monthsData[ym][id])||{};
+  const claimed=!cur.claimed;
+  const next={...cur, claimed, confirmed: claimed?cur.confirmed:false};
+  sync('syncing');
+  try { await set(ref(db,'months/'+ym+'/'+id), next); sync('synced'); }
+  catch(e){ sync('error'); toast('save failed'); }
+};
+window.domConfirmMonth = async function(id){
+  if(role!=='daddy') return;
+  const ym=ymOf(currentWeekStart);
+  const cur=(monthsData[ym]&&monthsData[ym][id])||{};
+  const confirmed=!cur.confirmed;
+  const next={...cur, confirmed, claimed: confirmed?true:cur.claimed};
+  sync('syncing');
+  try { await set(ref(db,'months/'+ym+'/'+id), next); sync('synced'); }
+  catch(e){ sync('error'); toast('save failed'); }
+};
+window.redeemReward = async function(rid){
+  if(role!=='daddy') return;
+  const r=REWARDS.find(x=>x.id===rid); if(!r) return;
+  const bal=calcPoints().balance;
+  const msg = bal>=r.cost
+    ? 'Redeem "'+r.name+'" for '+r.cost+' points? (balance '+bal+')'
+    : 'Balance ('+bal+') is below the '+r.cost+'-point cost. Redeem anyway?';
+  if(!confirm(msg)) return;
+  sync('syncing');
+  try { await push(ref(db,'redemptions'), { name:r.name, cost:r.cost, ts:Date.now() }); sync('synced'); toast('redeemed '+r.name, true); }
+  catch(e){ sync('error'); toast('redeem failed'); }
+};
+window.undoRedeem = async function(key){
+  if(role!=='daddy') return;
+  if(!confirm('Remove this redemption and refund the points?')) return;
+  sync('syncing');
+  try { await remove(ref(db,'redemptions/'+key)); sync('synced'); toast('refunded', true); }
+  catch(e){ sync('error'); toast('failed'); }
+};
+
+function achRow(a, wk, isDaddy, isMonth, ym){
+  let earned, st;
+  if(isMonth){ st=(monthsData[ym]&&monthsData[ym][a.id])||{}; earned=!!st.claimed; }
+  else { st=weekAchSt(wk)[a.id]||{}; earned = a.type==='auto' ? autoEarned(a.rule,getWeekData(wk)) : !!st.claimed; }
+  const confirmed=!!st.confirmed;
+  const cfn=isMonth?'domConfirmMonth':'domConfirm';
+  const sfn=isMonth?'subClaimMonth':'subClaim';
+  let right;
+  if(confirmed){
+    right=`<span class="ach-bdg conf">✓ +${a.points} confirmed</span>`
+      + (isDaddy?` <button class="ach-btn" onclick="${cfn}('${a.id}')">undo</button>`:'');
+  } else if(earned){
+    if(isDaddy){
+      right=`<span class="ach-bdg pend">earned · pending</span> <button class="ach-btn ok" onclick="${cfn}('${a.id}')">Confirm</button>`;
+    } else {
+      right=`<span class="ach-bdg pend">earned · pending Daddy</span>`
+        + ((a.type!=='auto')?` <button class="ach-btn" onclick="${sfn}('${a.id}')">undo</button>`:'');
+    }
+  } else if(a.type==='auto'){
+    right=`<span class="ach-bdg">not yet</span>`;
+  } else if(isDaddy){
+    right=`<button class="ach-btn ok" onclick="${cfn}('${a.id}')">Confirm</button>`;
+  } else {
+    right=`<button class="ach-btn go" onclick="${sfn}('${a.id}')">Mark done</button>`;
+  }
+  const tag = a.type==='auto' ? '<span class="ach-bdg auto">auto</span>' : '';
+  return `<div class="ach-item${(earned||confirmed)?' earned':''}">`
+    + `<div class="ach-ic">${a.icon}</div>`
+    + `<div><div class="ach-nm">${esc(a.name)}</div><div class="ach-ds">${esc(a.desc)} · ${esc(a.crit)}</div></div>`
+    + `<div class="ach-rt">${tag}<span class="ach-pt">+${a.points}</span>${right}</div></div>`;
+}
+
+function renderAchievements(){
+  const wk=weekKey(currentWeekStart);
+  const dates=weekDates(currentWeekStart);
+  const isDaddy=role==='daddy';
+  document.getElementById('a-week-label').textContent=fmt(currentWeekStart)+' – '+fmt(dates[6]);
+
+  const p=calcPoints();
+  document.getElementById('a-balance').textContent=p.balance;
+  document.getElementById('a-earned').textContent=p.earned;
+  document.getElementById('a-spent').textContent=p.spent;
+
+  let pendCount=0, pendPts=0;
+  ACHIEVEMENTS.forEach(a=>{
+    if(a.group==='month') return;
+    if(isEarned(a,wk)){ const st=weekAchSt(wk)[a.id]; if(!(st&&st.confirmed)){ pendCount++; pendPts+=a.points; } }
+  });
+  document.getElementById('a-pending').textContent=pendCount;
+
+  const cb=document.getElementById('a-confirmbar');
+  if(isDaddy && pendCount>0){
+    cb.className='confirm-bar';
+    cb.innerHTML=`<div class="cb-txt">${pendCount} achievement${pendCount>1?'s':''} earned this week awaiting confirmation · <strong style="color:var(--gold)">+${pendPts} pts</strong></div><button class="ach-btn go" onclick="confirmWeekAll()">Confirm all</button>`;
+  } else if(!isDaddy && pendCount>0){
+    cb.className='confirm-bar';
+    cb.innerHTML=`<div class="cb-txt">${pendCount} earned this week · <strong style="color:var(--gold)">+${pendPts} pts</strong> waiting for Daddy to confirm at week's end 💛</div>`;
+  } else { cb.className=''; cb.innerHTML=''; }
+
+  const groups=[
+    { k:'vw',   t:'💧 Vitamins & Water' },
+    { k:'wo',   t:'💪 Workouts & Outdoors' },
+    { k:'help', t:'🤝 Asking for Help & Communication' },
+    { k:'body', t:'🪞 Body & Confidence' },
+  ];
+  const list=document.getElementById('a-list'); list.innerHTML='';
+  groups.forEach(g=>{
+    const items=ACHIEVEMENTS.filter(a=>a.group===g.k);
+    if(!items.length) return;
+    const box=document.createElement('div'); box.className='ach-group';
+    let html=`<div class="ach-group-title">${g.t}</div>`;
+    items.forEach((a,i)=>{ html+=achRow(a,wk,isDaddy,false).replace('class="ach-item', 'class="ach-item'+(i===0?' first':'')); });
+    box.innerHTML=html; list.appendChild(box);
+  });
+
+  const ym=ymOf(currentWeekStart);
+  document.getElementById('a-month-title').textContent='👑 Monthly Challenges · '+monthLabel(currentWeekStart);
+  const mbox=document.getElementById('a-month'); mbox.innerHTML='';
+  ACHIEVEMENTS.filter(a=>a.group==='month').forEach((a,i)=>{
+    mbox.innerHTML+=achRow(a,wk,isDaddy,true,ym).replace('class="ach-item', 'class="ach-item'+(i===0?' first':''));
+  });
+
+  const store=document.getElementById('a-store'); store.innerHTML='';
+  REWARDS.forEach(r=>{
+    const afford=p.balance>=r.cost;
+    const card=document.createElement('div'); card.className='store-card'+(afford?' afford':'');
+    card.innerHTML=`<div class="store-nm">${esc(r.name)}</div><div class="store-ds">${esc(r.desc)}</div>`
+      +`<div class="store-ft"><span class="store-cost">${r.cost} pts</span>`
+      +(isDaddy
+        ? `<button class="ach-btn ${afford?'go':''}" onclick="redeemReward('${r.id}')">Redeem</button>`
+        : `<span class="ach-bdg ${afford?'conf':''}">${afford?'affordable':'locked'}</span>`)
+      +`</div>`;
+    store.appendChild(card);
+  });
+
+  const rd=document.getElementById('a-redeems');
+  const entries=Object.entries(redemptions||{}).map(([k,v])=>({k,...v})).sort((a,b)=>(b.ts||0)-(a.ts||0));
+  if(!entries.length){
+    rd.innerHTML='<div style="font-size:12px;color:var(--text3);font-family:\'DM Mono\',monospace;">nothing redeemed yet</div>';
+  } else {
+    rd.innerHTML='';
+    entries.forEach((e,i)=>{
+      const dt=new Date(e.ts).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+      const row=document.createElement('div'); row.className='redeem-row'+(i===0?' first':'');
+      row.innerHTML=`<span>${esc(e.name)} · <span style="color:var(--text3)">${dt}</span></span>`
+        +`<span style="display:flex;align-items:center;gap:10px;"><span style="color:var(--red);font-family:'DM Mono',monospace;">−${e.cost}</span>`
+        +(isDaddy?`<button class="ach-btn warn" onclick="undoRedeem('${esc(e.k)}')">undo</button>`:'')+`</span>`;
+      rd.appendChild(row);
     });
   }
 }
