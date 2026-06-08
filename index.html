@@ -598,8 +598,17 @@ const ACHIEVEMENTS = [
   { id:'depression_buster', group:'wo', type:'manual',              icon:'🌧️', points:25,  name:'Depression Buster',   desc:'Working out even on a hard / low day', crit:'1 hard-day workout' },
   { id:'free_vitamin_d',    group:'wo', type:'manual',              icon:'🚶', points:30,  name:'Free Vitamin D',      desc:'Walk outside — at least to the pond and back', crit:'1 walk' },
   { id:'better_coat',       group:'wo', type:'manual',              icon:'🧥', points:50,  name:'Better Wear a Coat!', desc:'Walk outside when it’s 30°F or colder', crit:'1 cold walk' },
+  // Business Work
+  { id:'open_for_business', group:'work', type:'auto', rule:'work1', icon:'💼', points:20, name:'Open for Business', desc:'Putting in a business work session', crit:'1 session' },
+  { id:'grind_mode',        group:'work', type:'auto', rule:'work3', icon:'📈', points:50, name:'Grind Mode',        desc:'Three business work sessions in one week', crit:'3 days' },
+  { id:'ceo_energy',        group:'work', type:'auto', rule:'work5', icon:'👩‍💼', points:75, name:'CEO Energy',        desc:'Five business work sessions in one week', crit:'5 days' },
+  // Reading
+  { id:'page_turner', group:'reading', type:'auto', rule:'read1', icon:'📖', points:5,  name:'Page Turner', desc:'Reading for the day', crit:'1 day' },
+  { id:'well_read',   group:'reading', type:'auto', rule:'read3', icon:'📚', points:50, name:'Well Read',    desc:'Reading three days in one week', crit:'3 days' },
+  { id:'bookworm',    group:'reading', type:'auto', rule:'read7', icon:'🐛', points:75, name:'Bookworm',    desc:'Reading every day for a full week', crit:'7 days' },
   // Asking for Help & Communication
   { id:'squeaky_wheel',   group:'help', type:'auto',   rule:'help1', icon:'🛞', points:15, name:'The Squeaky Wheel',  desc:'Asking for help with a small task', crit:'1 instance' },
+  { id:'double_ask',      group:'help', type:'auto',   rule:'help2', icon:'🙋', points:30, name:'The Double Ask',     desc:'Asking for help twice in one week', crit:'2 instances' },
   { id:'burden_sharer',   group:'help', type:'manual',               icon:'🫂', points:30, name:'Burden Sharer',      desc:'Asking Daddy for help with a stressful decision', crit:'1 instance' },
   { id:'tactical_retreat',group:'help', type:'manual',               icon:'🚪', points:50, name:'The Tactical Retreat', desc:'Walking away from a frustrating task before melting down', crit:'1 reset' },
   { id:'voice_of_reason', group:'help', type:'auto',   rule:'help3', icon:'📣', points:50, name:'Voice of Reason',    desc:'Asking for help 3 separate times in one week', crit:'3 instances' },
@@ -1023,7 +1032,14 @@ function autoEarned(rule,d){
     case 'wo1':    return achCnt(d,'workout')>=1;
     case 'wo3':    return achCnt(d,'workout')>=3;
     case 'wo5':    return achCnt(d,'workout')>=5;
+    case 'work1':  return achCnt(d,'work')>=1;
+    case 'work3':  return achCnt(d,'work')>=3;
+    case 'work5':  return achCnt(d,'work')>=5;
+    case 'read1':  return achCnt(d,'reading')>=1;
+    case 'read3':  return achCnt(d,'reading')>=3;
+    case 'read7':  return achCnt(d,'reading')>=7;
     case 'help1':  return achCnt(d,'help')>=1;
+    case 'help2':  return achCnt(d,'help')>=2;
     case 'help3':  return achCnt(d,'help')>=3;
   }
   return false;
@@ -1179,10 +1195,12 @@ function renderAchievements(){
   } else { cb.className=''; cb.innerHTML=''; }
 
   const groups=[
-    { k:'vw',   t:'💧 Vitamins & Water' },
-    { k:'wo',   t:'💪 Workouts & Outdoors' },
-    { k:'help', t:'🤝 Asking for Help & Communication' },
-    { k:'body', t:'🪞 Body & Confidence' },
+    { k:'vw',      t:'💧 Vitamins & Water' },
+    { k:'wo',      t:'💪 Workouts & Outdoors' },
+    { k:'work',    t:'💼 Business Work' },
+    { k:'reading', t:'📖 Reading' },
+    { k:'help',    t:'🤝 Asking for Help & Communication' },
+    { k:'body',    t:'🪞 Body & Confidence' },
   ];
   const list=document.getElementById('a-list'); list.innerHTML='';
   groups.forEach(g=>{
