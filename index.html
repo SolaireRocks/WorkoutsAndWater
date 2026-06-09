@@ -221,6 +221,11 @@ body::before {
   .editor-input.num { grid-area: t; }
   .editor-input.j-lbl { grid-area: l; }
 }
+.ach-edit-group-title { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 1px; margin: 14px 0 7px; }
+.ach-edit-group-title:first-child { margin-top: 0; }
+.ach-edit-row { display: grid; grid-template-columns: 26px 1fr 72px; gap: 8px; align-items: center; margin-bottom: 7px; }
+.ach-edit-icon { text-align: center; font-size: 16px; }
+.ach-edit-name { font-size: 13px; color: var(--text2); line-height: 1.3; }
 .comments-list { display: flex; flex-direction: column; gap: 7px; margin-top: 10px; max-height: 220px; overflow-y: auto; }
 .comment-bubble { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 9px 12px; position: relative; }
 .comment-bubble.deletable { padding-right: 34px; }
@@ -461,6 +466,17 @@ body::before {
         </div>
       </div>
 
+      <!-- Edit achievement point values -->
+      <div class="card">
+        <div class="section-label">Edit achievement point values</div>
+        <div id="ach-editor"></div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:4px;">
+          <button class="save-btn" onclick="saveAchPoints()">save points</button>
+          <button class="save-btn" onclick="resetAchPoints()">reset to defaults</button>
+          <span style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;">changes sync to her achievements instantly</span>
+        </div>
+      </div>
+
       <!-- Her notes (read-only) -->
       <div class="card">
         <div class="section-label">Her notes for this week</div>
@@ -636,6 +652,19 @@ const REWARDS = [
   { id:'r_jewel', cost:3000, name:'The Bloodiest…',     desc:'Pick out a piece of jewelry that Daddy will buy for you (under $250).' },
 ];
 
+// Per-achievement point values are editable by Daddy from the dashboard.
+// Defaults live in ACHIEVEMENTS above; live overrides are stored in
+// Firebase ('config/achPoints') as { achId: points } and synced to both views.
+const DEFAULT_ACH_POINTS = {};
+ACHIEVEMENTS.forEach(a=>{ DEFAULT_ACH_POINTS[a.id]=a.points; });
+let achPoints = {};   // achId → overridden point value
+function applyAchPoints(overrides){
+  ACHIEVEMENTS.forEach(a=>{
+    const v = overrides && overrides[a.id];
+    a.points = (v!=null && v!=='' && !isNaN(v)) ? Number(v) : DEFAULT_ACH_POINTS[a.id];
+  });
+}
+
 const app = initializeApp(FB);
 const db  = getDatabase(app);
 
@@ -729,6 +758,11 @@ function startListening() {
     const v=snap.val();
     const arr=Array.isArray(v)?v:(v&&typeof v==='object'?Object.values(v):null);
     CATS=(arr&&arr.length)?arr.filter(Boolean).map(c=>({...c})):DEFAULT_CATS.map(c=>({...c}));
+    render();
+  });
+  onValue(ref(db,'config/achPoints'), snap=>{
+    achPoints=snap.val()||{};
+    applyAchPoints(achPoints);
     render();
   });
   onValue(ref(db,'months'),      snap=>{ monthsData=snap.val()||{};  render(); });
@@ -938,6 +972,72 @@ window.resetCats = async function() {
   } catch(e){ sync('error'); toast('save failed'); }
 };
 
+// ── ACHIEVEMENT POINTS EDITOR (daddy only) ──
+const ACH_EDIT_GROUPS=[
+  { k:'vw',      t:'💧 Vitamins & Water' },
+  { k:'wo',      t:'💪 Workouts & Outdoors' },
+  { k:'work',    t:'💼 Business Work' },
+  { k:'reading', t:'📖 Reading' },
+  { k:'help',    t:'🤝 Asking for Help & Communication' },
+  { k:'body',    t:'🪞 Body & Confidence' },
+  { k:'month',   t:'👑 Monthly Challenges' },
+];
+
+function renderAchEditor(){
+  const c=document.getElementById('ach-editor');
+  c.innerHTML='';
+  ACH_EDIT_GROUPS.forEach(g=>{
+    const items=ACHIEVEMENTS.filter(a=>a.group===g.k);
+    if(!items.length) return;
+    const title=document.createElement('div');
+    title.className='ach-edit-group-title';
+    title.textContent=g.t;
+    c.appendChild(title);
+    items.forEach(a=>{
+      const row=document.createElement('div');
+      row.className='ach-edit-row';
+      row.dataset.id=a.id;
+      row.innerHTML=
+        `<span class="ach-edit-icon">${esc(a.icon)}</span>`+
+        `<span class="ach-edit-name">${esc(a.name)}</span>`+
+        `<input class="editor-input num j-pts" type="number" min="0" max="100000" step="5" value="${parseInt(a.points,10)||0}" aria-label="points for ${esc(a.name)}">`;
+      c.appendChild(row);
+    });
+  });
+}
+
+window.saveAchPoints = async function() {
+  const rows=[...document.querySelectorAll('#ach-editor .ach-edit-row')];
+  if(!rows.length) return;
+  const next={};
+  rows.forEach(r=>{
+    const id=r.dataset.id;
+    const v=Math.max(0, parseInt(r.querySelector('.j-pts').value,10)||0);
+    next[id]=v;
+  });
+  sync('syncing');
+  try {
+    await set(ref(db,'config/achPoints'), next);
+    achPoints=next;
+    applyAchPoints(achPoints);
+    render();
+    sync('synced');
+    toast('achievement points saved', true);
+  } catch(e){ sync('error'); toast('save failed'); }
+};
+
+window.resetAchPoints = async function() {
+  sync('syncing');
+  try {
+    await remove(ref(db,'config/achPoints'));
+    achPoints={};
+    applyAchPoints(achPoints);
+    render();
+    sync('synced');
+    toast('points reset to defaults', true);
+  } catch(e){ sync('error'); toast('save failed'); }
+};
+
 // ── MAIN RENDER ──
 function render() {
   const wk=weekKey(currentWeekStart);
@@ -987,6 +1087,8 @@ function render() {
   // Don't rebuild the editor while Daddy is typing in it
   const ed=document.getElementById('cat-editor');
   if(!ed.contains(document.activeElement)) renderEditor();
+  const ape=document.getElementById('ach-editor');
+  if(!ape.contains(document.activeElement)) renderAchEditor();
 
   // History
   const hist=document.getElementById('d-history');
