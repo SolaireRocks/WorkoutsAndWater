@@ -586,8 +586,8 @@ const DEFAULT_CATS = [
   { id:'work',     icon:'💼', name:'Business Work',  target:3, lbl:'3× / week' },
   { id:'reading',  icon:'📖', name:'Reading',        target:7, lbl:'daily'     },
   { id:'help',     icon:'🤝', name:'Ask for Help',   target:2, lbl:'2× / week' },
-  { id:'lesspop',  icon:'🥤', name:'< 2 Pops',       target:7, lbl:'daily'     },
-  { id:'noeatlate',icon:'🌙', name:'No Late Eating',  target:7, lbl:'daily'     },
+  { id:'lesspop',  icon:'🥤', name:'< 2 Pops',       target:7, lbl:'daily', start:'2026-07-13' },
+  { id:'noeatlate',icon:'🌙', name:'No Late Eating',  target:7, lbl:'daily', start:'2026-07-13' },
 ];
 let CATS = DEFAULT_CATS.map(c=>({...c}));
 const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
@@ -697,9 +697,12 @@ function getWeekData(wk) {
   CATS.forEach(c=>{ if(!d.checks[c.id]) d.checks[c.id]=[false,false,false,false,false,false,false]; });
   return d;
 }
+// Categories active for a given week — a category with a `start` week key
+// doesn't appear or count in any week before that week.
+function catsForWeek(wk) { return CATS.filter(c=>!c.start || wk>=c.start); }
 function calcStats(wk) {
   const d=getWeekData(wk); let tt=0,td=0,cd=0;
-  CATS.forEach(c=>{ const n=(d.checks[c.id]||[]).filter(Boolean).length; tt+=c.target; td+=Math.min(n,c.target); if(n>=c.target)cd++; });
+  catsForWeek(wk).forEach(c=>{ const n=(d.checks[c.id]||[]).filter(Boolean).length; tt+=c.target; td+=Math.min(n,c.target); if(n>=c.target)cd++; });
   return {tt,td,cd,pct:tt>0?Math.round(td/tt*100):0};
 }
 function toast(msg,ok) {
@@ -848,8 +851,9 @@ function renderGrid(containerId, readonly) {
   });
 
   // Category rows
-  CATS.forEach((cat,ci)=>{
-    const isLast=ci===CATS.length-1;
+  const cats=catsForWeek(wk);
+  cats.forEach((cat,ci)=>{
+    const isLast=ci===cats.length-1;
     const count=(d.checks[cat.id]||[]).filter(Boolean).length;
     const met=count>=cat.target;
     const lbl=document.createElement('div');
@@ -880,7 +884,7 @@ function renderProgress(containerId, overallBarId, overallPctId, wk) {
   const pr=document.getElementById(containerId);
   pr.innerHTML='';
   let tt=0,td=0;
-  CATS.forEach(cat=>{
+  catsForWeek(wk).forEach(cat=>{
     const count=(d.checks[cat.id]||[]).filter(Boolean).length;
     const pb=Math.min(Math.round(count/cat.target*100),100);
     const isDone=count>=cat.target, isBonus=count>cat.target;
@@ -950,13 +954,20 @@ function renderEditor() {
 window.saveCats = async function() {
   const rows=[...document.querySelectorAll('#cat-editor .editor-row')];
   if(!rows.length) return;
-  const next=rows.map(r=>({
-    id: r.dataset.id,
-    icon: (r.querySelector('.j-icon').value.trim())||'•',
-    name: (r.querySelector('.j-name').value.trim())||'Activity',
-    target: Math.min(7, Math.max(1, parseInt(r.querySelector('.j-target').value,10)||1)),
-    lbl: r.querySelector('.j-lbl').value.trim()
-  }));
+  const byId={}; CATS.forEach(c=>{ byId[c.id]=c; });
+  const next=rows.map(r=>{
+    const prev=byId[r.dataset.id]||{};
+    const o={
+      id: r.dataset.id,
+      icon: (r.querySelector('.j-icon').value.trim())||'•',
+      name: (r.querySelector('.j-name').value.trim())||'Activity',
+      target: Math.min(7, Math.max(1, parseInt(r.querySelector('.j-target').value,10)||1)),
+      lbl: r.querySelector('.j-lbl').value.trim()
+    };
+    // Preserve the "starts tracking on" week gate through edits/saves.
+    if(prev.start) o.start=prev.start;
+    return o;
+  });
   sync('syncing');
   try {
     await set(ref(db,'config/cats'), next);
@@ -1054,7 +1065,7 @@ function render() {
   document.getElementById('t-week-label').textContent=fmt(currentWeekStart)+' – '+fmt(dates[6]);
   document.getElementById('t-done').textContent=td;
   document.getElementById('t-total').textContent=tt;
-  document.getElementById('t-cats').textContent=cd+'/'+CATS.length;
+  document.getElementById('t-cats').textContent=cd+'/'+catsForWeek(wk).length;
   document.getElementById('t-pct').textContent=pct+'%';
   document.getElementById('t-pen').textContent=penalties;
   renderGrid('t-grid', false);
@@ -1111,7 +1122,7 @@ function render() {
       const block=document.createElement('div'); block.className='history-week';
       let html=`<div class="hw-header"><span class="hw-label">${fmt(ws2)} – ${fmt(wd2[6])}${isNow?' <span style="font-size:10px;color:var(--accent);font-family:\'DM Mono\',monospace;">[current]</span>':''}</span><span class="hw-pct">${s2.pct}%</span></div>`;
       const dw=getWeekData(wkKey);
-      CATS.forEach(cat=>{
+      catsForWeek(wkKey).forEach(cat=>{
         const cnt=(dw.checks[cat.id]||[]).filter(Boolean).length;
         const pb=Math.min(Math.round(cnt/cat.target*100),100);
         html+=`<div class="hmb-row"><span class="hmb-name">${cat.icon} ${cat.name}</span><div class="hmb-track"><div class="hmb-fill${cnt>=cat.target?' full':''}" style="width:${pb}%"></div></div><span class="hmb-cnt">${cnt}/${cat.target}</span></div>`;
