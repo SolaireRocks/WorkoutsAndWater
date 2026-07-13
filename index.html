@@ -586,6 +586,8 @@ const DEFAULT_CATS = [
   { id:'work',     icon:'💼', name:'Business Work',  target:3, lbl:'3× / week' },
   { id:'reading',  icon:'📖', name:'Reading',        target:7, lbl:'daily'     },
   { id:'help',     icon:'🤝', name:'Ask for Help',   target:2, lbl:'2× / week' },
+  { id:'lesspop',  icon:'🥤', name:'< 2 Pops',       target:7, lbl:'daily'     },
+  { id:'noeatlate',icon:'🌙', name:'No Late Eating',  target:7, lbl:'daily'     },
 ];
 let CATS = DEFAULT_CATS.map(c=>({...c}));
 const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
@@ -757,7 +759,11 @@ function startListening() {
   onValue(ref(db,'config/cats'), snap=>{
     const v=snap.val();
     const arr=Array.isArray(v)?v:(v&&typeof v==='object'?Object.values(v):null);
-    CATS=(arr&&arr.length)?arr.filter(Boolean).map(c=>({...c})):DEFAULT_CATS.map(c=>({...c}));
+    const cats=(arr&&arr.length)?arr.filter(Boolean).map(c=>({...c})):DEFAULT_CATS.map(c=>({...c}));
+    // Ensure newly-added default categories appear even when an older
+    // customized config is stored in Firebase without them.
+    DEFAULT_CATS.forEach(dc=>{ if(!cats.some(c=>c.id===dc.id)) cats.push({...dc}); });
+    CATS=cats;
     render();
   });
   onValue(ref(db,'config/achPoints'), snap=>{
