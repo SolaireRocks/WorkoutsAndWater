@@ -766,6 +766,10 @@ function startListening() {
     // Ensure newly-added default categories appear even when an older
     // customized config is stored in Firebase without them.
     DEFAULT_CATS.forEach(dc=>{ if(!cats.some(c=>c.id===dc.id)) cats.push({...dc}); });
+    // Re-apply the "starts tracking on" week gate onto matching stored
+    // categories, in case an older config was saved before it existed.
+    const defById={}; DEFAULT_CATS.forEach(dc=>{ defById[dc.id]=dc; });
+    cats.forEach(c=>{ const dc=defById[c.id]; if(dc&&dc.start&&!c.start) c.start=dc.start; });
     CATS=cats;
     render();
   });
