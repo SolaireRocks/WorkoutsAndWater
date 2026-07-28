@@ -278,16 +278,17 @@ body::before {
 .comment-del:hover { color: var(--red); background: var(--red-dim); }
 .comment-meta { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--text3); margin-bottom: 3px; }
 .comment-text { font-size: 13px; color: var(--text2); line-height: 1.5; }
-.comment-input-row { display: flex; gap: 8px; margin-top: 10px; }
+.comment-input-row { display: flex; gap: 8px; margin-top: 10px; align-items: stretch; }
 .comment-input {
   flex: 1; background: var(--bg); border: 1px solid var(--border);
   border-radius: 8px; color: var(--text); font-size: 13px; font-family: 'Syne', sans-serif; padding: 8px 12px;
+  resize: vertical; min-height: 68px; line-height: 1.5;
 }
 .comment-input:focus { outline: none; border-color: var(--border2); }
 .comment-send {
   background: var(--accent-dim); border: 1px solid var(--accent);
   border-radius: 8px; color: var(--text); font-size: 12px; font-family: 'DM Mono', monospace;
-  padding: 8px 14px; cursor: pointer; transition: background 0.15s; white-space: nowrap;
+  padding: 8px 14px; cursor: pointer; transition: background 0.15s; white-space: nowrap; align-self: stretch;
 }
 .comment-send:hover { background: #2a2050; }
 
@@ -539,7 +540,7 @@ body::before {
         <div class="section-label">Leave a comment for her</div>
         <div class="comments-list" id="d-comments"></div>
         <div class="comment-input-row">
-          <input class="comment-input" id="d-comment-input" placeholder="Write a comment..." onkeydown="if(event.key==='Enter')postComment()">
+          <textarea class="comment-input" id="d-comment-input" rows="3" placeholder="Write a comment...  (Enter to send, Shift+Enter for a new line)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();postComment();}"></textarea>
           <button class="comment-send" onclick="postComment()">send</button>
         </div>
       </div>
