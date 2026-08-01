@@ -419,6 +419,32 @@ body::before {
 .ter-prev { padding: 8px 12px; white-space: nowrap; }
 .ter-msg { width: 100%; resize: vertical; min-height: 46px; font-family: 'Syne', sans-serif; }
 
+/* SPEND CONFIRMATION MODAL */
+.modal-overlay { position: fixed; inset: 0; z-index: 320; display: none; align-items: center; justify-content: center; padding: 24px; background: rgba(6,6,12,0.9); }
+.modal-overlay.show { display: flex; }
+.modal-card { background: var(--surface); border: 1px solid var(--border2); border-radius: 18px; padding: 26px 24px; width: 100%; max-width: 360px; text-align: center; animation: popIn 0.25s ease; }
+.modal-icon { font-size: 40px; line-height: 1; }
+.modal-title { font-size: 19px; font-weight: 600; margin-top: 12px; line-height: 1.3; }
+.modal-name { font-size: 15px; font-weight: 600; color: var(--gold); margin-top: 12px; }
+.modal-desc { font-size: 12px; color: var(--text3); line-height: 1.5; margin-top: 6px; }
+.modal-bal { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--text2); line-height: 1.8; margin-top: 16px; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
+.modal-bal .warn { color: var(--red); }
+.modal-btns { display: flex; gap: 10px; margin-top: 18px; }
+.modal-btn { flex: 1; padding: 11px; border-radius: 9px; border: 1px solid var(--border); background: var(--surface2); color: var(--text2); font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; }
+.modal-btn:hover { background: var(--surface3); color: var(--text); }
+.modal-btn.go { border-color: var(--accent); background: var(--accent-dim); color: var(--text); }
+.modal-btn.go:hover { background: #2a2050; }
+.modal-btn:disabled { opacity: 0.5; cursor: default; }
+
+/* SPEND ALERT (daddy) */
+.confirm-bar.spend { background: rgba(240,192,96,0.08); border-color: #5a4a20; }
+.alert-btns { display: flex; align-items: center; gap: 8px; }
+
+/* POINT STATS */
+.pt-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.pt-stats + .pt-stats { margin-top: 10px; }
+@media (max-width: 600px) { .pt-stats { grid-template-columns: repeat(2, 1fr); } }
+
 /* TOAST */
 .toast {
   position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px);
@@ -535,7 +561,25 @@ body::before {
         <div class="stat-card danger"><div class="stat-label">Total Penalties</div><div class="stat-val" id="d-pen-stat">0</div><div class="stat-sub">strikes owed</div></div>
       </div>
 
+      <div id="d-spend-alert"></div>
       <div id="d-tally-status"></div>
+
+      <!-- Points overview -->
+      <div class="card">
+        <div class="section-label">🪙 Points</div>
+        <div class="pt-stats">
+          <div class="stat-card"><div class="stat-label">Balance</div><div class="stat-val" id="d-pt-bal" style="color:var(--gold)">0</div><div class="stat-sub">spendable</div></div>
+          <div class="stat-card"><div class="stat-label">Last Week</div><div class="stat-val" id="d-pt-lastweek">0</div><div class="stat-sub" id="d-pt-lastweek-sub">pts earned</div></div>
+          <div class="stat-card"><div class="stat-label">Weekly Avg</div><div class="stat-val" id="d-pt-wavg">0</div><div class="stat-sub" id="d-pt-wavg-sub">pts / week</div></div>
+          <div class="stat-card"><div class="stat-label">Monthly Avg</div><div class="stat-val" id="d-pt-mavg">0</div><div class="stat-sub" id="d-pt-mavg-sub">pts / month</div></div>
+        </div>
+        <div class="pt-stats">
+          <div class="stat-card"><div class="stat-label">This Month</div><div class="stat-val" id="d-pt-thismonth">0</div><div class="stat-sub" id="d-pt-thismonth-sub">pts earned</div></div>
+          <div class="stat-card"><div class="stat-label">Earned</div><div class="stat-val" id="d-pt-earned">0</div><div class="stat-sub">all-time</div></div>
+          <div class="stat-card"><div class="stat-label">Spent</div><div class="stat-val" id="d-pt-spent">0</div><div class="stat-sub" id="d-pt-spent-sub">total spent</div></div>
+          <div class="stat-card"><div class="stat-label">Redemptions</div><div class="stat-val" id="d-pt-count">0</div><div class="stat-sub">all-time</div></div>
+        </div>
+      </div>
 
       <!-- Read-only grid for daddy -->
       <div class="tracker-card"><div class="tracker-grid" id="d-grid"></div></div>
@@ -665,8 +709,15 @@ body::before {
         <div class="stat-card"><div class="stat-label">Points Balance</div><div class="stat-val" id="a-balance" style="color:var(--gold)">0</div><div class="stat-sub">spendable</div></div>
         <div class="stat-card"><div class="stat-label">Earned</div><div class="stat-val" id="a-earned">0</div><div class="stat-sub">all-time</div></div>
         <div class="stat-card"><div class="stat-label">Pending</div><div class="stat-val" id="a-pending">0</div><div class="stat-sub">this week</div></div>
-        <div class="stat-card"><div class="stat-label">Redeemed</div><div class="stat-val" id="a-spent">0</div><div class="stat-sub">total spent</div></div>
+        <div class="stat-card"><div class="stat-label">Redeemed</div><div class="stat-val" id="a-spent">0</div><div class="stat-sub" id="a-spent-sub">total spent</div></div>
       </div>
+      <div class="ach-summary">
+        <div class="stat-card"><div class="stat-label">Last Week</div><div class="stat-val" id="a-lastweek">0</div><div class="stat-sub" id="a-lastweek-sub">pts earned</div></div>
+        <div class="stat-card"><div class="stat-label">Weekly Avg</div><div class="stat-val" id="a-wavg">0</div><div class="stat-sub" id="a-wavg-sub">pts / week</div></div>
+        <div class="stat-card"><div class="stat-label">Monthly Avg</div><div class="stat-val" id="a-mavg">0</div><div class="stat-sub" id="a-mavg-sub">pts / month</div></div>
+        <div class="stat-card"><div class="stat-label">This Month</div><div class="stat-val" id="a-thismonth">0</div><div class="stat-sub" id="a-thismonth-sub">pts earned</div></div>
+      </div>
+      <div id="a-spend-alert"></div>
       <div id="a-confirmbar"></div>
       <div id="a-list"></div>
       <div class="ach-group">
@@ -696,6 +747,21 @@ body::before {
   <canvas class="fx-canvas" id="fx-canvas"></canvas>
   <button class="tally-close" id="tally-close" onclick="closeTally()" style="display:none">close ✕</button>
   <div class="tally-inner" id="tally-inner"></div>
+</div>
+
+<!-- SPEND CONFIRMATION -->
+<div class="modal-overlay" id="spend-overlay">
+  <div class="modal-card">
+    <div class="modal-icon">🎁</div>
+    <div class="modal-title" id="spend-title">Spend your points?</div>
+    <div class="modal-name" id="spend-name"></div>
+    <div class="modal-desc" id="spend-desc"></div>
+    <div class="modal-bal" id="spend-bal"></div>
+    <div class="modal-btns">
+      <button class="modal-btn" id="spend-cancel" onclick="closeSpend()">Cancel</button>
+      <button class="modal-btn go" id="spend-go" onclick="confirmSpend()">Yes, spend it</button>
+    </div>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -1541,6 +1607,16 @@ function render() {
   document.getElementById('d-pen-stat').textContent=penalties;
   document.getElementById('d-pen-big').textContent=penalties;
 
+  renderSpendAlerts('d-spend-alert');
+  renderPointStats({
+    bal:'d-pt-bal', earned:'d-pt-earned', spent:'d-pt-spent', spentSub:'d-pt-spent-sub',
+    count:'d-pt-count',
+    lastWeek:'d-pt-lastweek', lastWeekSub:'d-pt-lastweek-sub',
+    wavg:'d-pt-wavg', wavgSub:'d-pt-wavg-sub',
+    mavg:'d-pt-mavg', mavgSub:'d-pt-mavg-sub',
+    thisMonth:'d-pt-thismonth', thisMonthSub:'d-pt-thismonth-sub',
+  });
+
   const ts=document.getElementById('d-tally-status');
   const tallyRec=getWeekData(wk).tally;
   if(ts){
@@ -1662,6 +1738,85 @@ function calcPoints(){
   return { earned, spent, balance:earned-spent, confirmed };
 }
 
+// ── POINT STATISTICS ───────────────────────────────────────────────
+// Points are attributed to a period so we can show "last week" and the
+// weekly / monthly averages. Weekly achievements land in their own week
+// (and in the month that week's Monday falls in); monthly challenges land
+// in the month they were claimed for. One-time milestones aren't dated,
+// so they only count toward the all-time totals.
+function weeklyPointsMap(){
+  const map={};
+  Object.keys(allData).forEach(wk=>{
+    const ach=(allData[wk]&&allData[wk].ach)||{};
+    let sum=0;
+    ACHIEVEMENTS.forEach(a=>{
+      if(a.group!=='month' && a.group!=='once' && ach[a.id] && ach[a.id].confirmed) sum+=a.points;
+    });
+    map[wk]=sum;
+  });
+  return map;
+}
+function monthlyPointsMap(){
+  const map={}, wp=weeklyPointsMap();
+  Object.keys(wp).forEach(wk=>{ const ym=wk.slice(0,7); map[ym]=(map[ym]||0)+wp[wk]; });
+  Object.keys(monthsData).forEach(ym=>{
+    const md=monthsData[ym]||{};
+    let sum=0;
+    ACHIEVEMENTS.forEach(a=>{ if(a.group==='month' && md[a.id] && md[a.id].confirmed) sum+=a.points; });
+    if(sum) map[ym]=(map[ym]||0)+sum;
+  });
+  return map;
+}
+function pointStats(){
+  const p=calcPoints();
+  const wp=weeklyPointsMap(), mp=monthlyPointsMap();
+  const curWk=weekKey(getWeekStart(new Date())), curYm=curWk.slice(0,7);
+
+  // "Last week" = the week before the one being viewed.
+  const prevWs=new Date(currentWeekStart); prevWs.setDate(prevWs.getDate()-7);
+  const prevKey=weekKey(prevWs);
+  const prevEnd=new Date(prevWs); prevEnd.setDate(prevEnd.getDate()+6);
+
+  // Averages skip the in-progress week/month so a partial period doesn't
+  // drag the number down — unless that's all the history there is.
+  const avg=v=>v.length?Math.round(v.reduce((a,b)=>a+b,0)/v.length):0;
+  const wkAll=Object.keys(wp).filter(k=>k<=curWk);
+  const wkDone=wkAll.filter(k=>k<curWk);
+  const wkUse=wkDone.length?wkDone:wkAll;
+  const ymAll=Object.keys(mp).filter(k=>k<=curYm);
+  const ymDone=ymAll.filter(k=>k<curYm);
+  const ymUse=ymDone.length?ymDone:ymAll;
+
+  const viewYm=ymOf(currentWeekStart);
+  return {
+    ...p,
+    lastWeek: wp[prevKey]||0,
+    lastWeekLabel: fmt(prevWs)+' – '+fmt(prevEnd),
+    weekAvg: avg(wkUse.map(k=>wp[k])), weekN: wkUse.length,
+    monthAvg: avg(ymUse.map(k=>mp[k])), monthN: ymUse.length,
+    thisMonth: mp[viewYm]||0,
+    thisMonthLabel: currentWeekStart.toLocaleDateString('en-US',{month:'long'}),
+    redeemCount: Object.keys(redemptions||{}).length,
+  };
+}
+function setTxt(id, val){ const el=document.getElementById(id); if(el) el.textContent=val; }
+function renderPointStats(ids){
+  const s=pointStats();
+  setTxt(ids.bal, s.balance);
+  setTxt(ids.earned, s.earned);
+  setTxt(ids.spent, s.spent);
+  setTxt(ids.spentSub, s.redeemCount+' redemption'+(s.redeemCount===1?'':'s'));
+  setTxt(ids.count, s.redeemCount);
+  setTxt(ids.lastWeek, s.lastWeek);
+  setTxt(ids.lastWeekSub, s.lastWeekLabel);
+  setTxt(ids.wavg, s.weekAvg);
+  setTxt(ids.wavgSub, 'over '+s.weekN+' week'+(s.weekN===1?'':'s'));
+  setTxt(ids.mavg, s.monthAvg);
+  setTxt(ids.mavgSub, 'over '+s.monthN+' month'+(s.monthN===1?'':'s'));
+  setTxt(ids.thisMonth, s.thisMonth);
+  setTxt(ids.thisMonthSub, s.thisMonthLabel);
+}
+
 function ensureWeekAch(wk){
   if(!allData[wk]) allData[wk]=emptyWeek();
   if(!allData[wk].ach) allData[wk].ach={};
@@ -1729,25 +1884,127 @@ window.domConfirmOnce = async function(id){
   try { await set(ref(db,'oneshots/'+id), next); sync('synced'); }
   catch(e){ sync('error'); toast('save failed'); }
 };
-window.redeemReward = async function(rid){
-  if(role!=='daddy') return;
+// ── SPENDING POINTS ────────────────────────────────────────────────
+// Either side can redeem. She gets a confirmation box first (and can only
+// spend what she actually has); Daddy may override the balance. Anything
+// she spends raises an alert on his dashboard until he acknowledges or
+// refunds it.
+let spendPending=null, spendBusy=false;
+
+window.redeemReward = function(rid){
   const r=REWARDS.find(x=>x.id===rid); if(!r) return;
   const bal=calcPoints().balance;
-  const msg = bal>=r.cost
-    ? 'Redeem "'+r.name+'" for '+r.cost+' points? (balance '+bal+')'
-    : 'Balance ('+bal+') is below the '+r.cost+'-point cost. Redeem anyway?';
-  if(!confirm(msg)) return;
-  sync('syncing');
-  try { await push(ref(db,'redemptions'), { name:r.name, cost:r.cost, ts:Date.now() }); sync('synced'); toast('redeemed '+r.name, true); }
-  catch(e){ sync('error'); toast('redeem failed'); }
+  const short=r.cost-bal;
+  if(role!=='daddy' && short>0){ toast('need '+short+' more points'); return; }
+
+  spendPending=r; spendBusy=false;
+  document.getElementById('spend-title').textContent='Spend '+r.cost+' points?';
+  document.getElementById('spend-name').textContent=r.name;
+  document.getElementById('spend-desc').textContent=r.desc;
+  document.getElementById('spend-bal').innerHTML= short>0
+    ? `balance ${bal} · cost ${r.cost}<br><span class="warn">${short} points short — overriding</span>`
+    : `balance ${bal} → <strong style="color:var(--gold)">${bal-r.cost}</strong> after`;
+  const go=document.getElementById('spend-go');
+  go.disabled=false;
+  go.textContent = role==='daddy' ? 'Redeem for her' : 'Yes, spend it';
+  document.getElementById('spend-overlay').classList.add('show');
 };
+
+window.closeSpend = function(){
+  document.getElementById('spend-overlay').classList.remove('show');
+  spendPending=null; spendBusy=false;
+};
+// Tapping the backdrop or pressing Escape cancels — never confirms.
+document.getElementById('spend-overlay').addEventListener('click', e=>{
+  if(e.target.id==='spend-overlay' && !spendBusy) window.closeSpend();
+});
+document.addEventListener('keydown', e=>{
+  if(e.key==='Escape' && !spendBusy &&
+     document.getElementById('spend-overlay').classList.contains('show')) window.closeSpend();
+});
+
+window.confirmSpend = async function(){
+  if(spendBusy || !spendPending) return;
+  const r=spendPending;
+  spendBusy=true;
+  document.getElementById('spend-go').disabled=true;
+  sync('syncing');
+  try {
+    await push(ref(db,'redemptions'), {
+      name:r.name, cost:r.cost, ts:Date.now(),
+      by: role==='daddy' ? 'daddy' : 'sub',
+      seen: role==='daddy',
+    });
+    sync('synced');
+    window.closeSpend();
+    if(role==='daddy') toast('redeemed '+r.name, true);
+    else showSpendCelebration(r);
+  } catch(e){
+    sync('error'); toast('redeem failed');
+    spendBusy=false;
+    document.getElementById('spend-go').disabled=false;
+  }
+};
+
+// Reuses the tally overlay + fanfare engine for the celebration.
+function showSpendCelebration(r){
+  const ov=document.getElementById('tally-overlay');
+  const inner=document.getElementById('tally-inner');
+  const closeBtn=document.getElementById('tally-close');
+  stopFanfare();
+  inner.innerHTML=
+    `<div class="tally-msg-wrap in">`+
+      `<div style="font-size:60px;line-height:1">🎁</div>`+
+      `<div class="tally-title" style="margin-top:12px">Redeemed!</div>`+
+      `<div class="tally-message">${esc(r.name)}</div>`+
+      `<div class="tally-pct" style="font-size:48px;margin-top:10px">−${r.cost}</div>`+
+      `<div class="tally-pct-lbl">points spent</div>`+
+      `<div class="tally-notified">Daddy has been notified 💌</div>`+
+    `</div>`;
+  ov.classList.add('show');
+  closeBtn.style.display='';
+  fxInit();
+  playFanfare('great');
+}
+
 window.undoRedeem = async function(key){
   if(role!=='daddy') return;
-  if(!confirm('Remove this redemption and refund the points?')) return;
+  const r=(redemptions||{})[key];
+  const label=r?('"'+r.name+'" ('+r.cost+' pts)'):'this redemption';
+  if(!confirm('Refund '+label+'?\nThe points go straight back into her balance.')) return;
   sync('syncing');
   try { await remove(ref(db,'redemptions/'+key)); sync('synced'); toast('refunded', true); }
+  catch(e){ sync('error'); toast('refund failed'); }
+};
+
+// Dismiss the "she spent points" alert without refunding.
+window.ackSpend = async function(key){
+  if(role!=='daddy') return;
+  sync('syncing');
+  try { await set(ref(db,'redemptions/'+key+'/seen'), true); sync('synced'); }
   catch(e){ sync('error'); toast('failed'); }
 };
+
+function pendingSpends(){
+  return Object.entries(redemptions||{})
+    .map(([k,v])=>({k,...v}))
+    .filter(r=>r.by==='sub' && !r.seen)
+    .sort((a,b)=>(b.ts||0)-(a.ts||0));
+}
+function renderSpendAlerts(containerId){
+  const el=document.getElementById(containerId); if(!el) return;
+  if(role!=='daddy'){ el.innerHTML=''; return; }
+  const list=pendingSpends();
+  el.innerHTML=list.map(r=>{
+    const when=new Date(r.ts||0).toLocaleDateString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
+    return `<div class="confirm-bar spend">`+
+      `<div class="cb-txt">🎁 She spent <strong style="color:var(--gold)">${(+r.cost||0)} pts</strong> on <strong>${esc(r.name)}</strong> · <span style="color:var(--text3)">${when}</span></div>`+
+      `<span class="alert-btns">`+
+        `<button class="ach-btn warn" onclick="undoRedeem('${esc(r.k)}')">Refund</button>`+
+        `<button class="ach-btn ok" onclick="ackSpend('${esc(r.k)}')">Got it</button>`+
+      `</span></div>`;
+  }).join('');
+}
 
 function achRow(a, wk, isDaddy, isMonth, ym, isOnce){
   let earned, st;
@@ -1789,9 +2046,14 @@ function renderAchievements(){
   document.getElementById('a-week-label').textContent=fmt(currentWeekStart)+' – '+fmt(dates[6]);
 
   const p=calcPoints();
-  document.getElementById('a-balance').textContent=p.balance;
-  document.getElementById('a-earned').textContent=p.earned;
-  document.getElementById('a-spent').textContent=p.spent;
+  renderPointStats({
+    bal:'a-balance', earned:'a-earned', spent:'a-spent', spentSub:'a-spent-sub',
+    lastWeek:'a-lastweek', lastWeekSub:'a-lastweek-sub',
+    wavg:'a-wavg', wavgSub:'a-wavg-sub',
+    mavg:'a-mavg', mavgSub:'a-mavg-sub',
+    thisMonth:'a-thismonth', thisMonthSub:'a-thismonth-sub',
+  });
+  renderSpendAlerts('a-spend-alert');
 
   let pendCount=0, pendPts=0;
   ACHIEVEMENTS.forEach(a=>{
@@ -1849,7 +2111,9 @@ function renderAchievements(){
       +`<div class="store-ft"><span class="store-cost">${r.cost} pts</span>`
       +(isDaddy
         ? `<button class="ach-btn ${afford?'go':''}" onclick="redeemReward('${r.id}')">Redeem</button>`
-        : `<span class="ach-bdg ${afford?'conf':''}">${afford?'affordable':'locked'}</span>`)
+        : (afford
+            ? `<button class="ach-btn go" onclick="redeemReward('${r.id}')">Redeem</button>`
+            : `<span class="ach-bdg">${r.cost-p.balance} more</span>`))
       +`</div>`;
     store.appendChild(card);
   });
@@ -1862,10 +2126,11 @@ function renderAchievements(){
     rd.innerHTML='';
     entries.forEach((e,i)=>{
       const dt=new Date(e.ts).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+      const who=e.by==='sub'?' · <span style="color:var(--text3)">by her</span>':'';
       const row=document.createElement('div'); row.className='redeem-row'+(i===0?' first':'');
-      row.innerHTML=`<span>${esc(e.name)} · <span style="color:var(--text3)">${dt}</span></span>`
+      row.innerHTML=`<span>${esc(e.name)} · <span style="color:var(--text3)">${dt}</span>${who}</span>`
         +`<span style="display:flex;align-items:center;gap:10px;"><span style="color:var(--red);font-family:'DM Mono',monospace;">−${e.cost}</span>`
-        +(isDaddy?`<button class="ach-btn warn" onclick="undoRedeem('${esc(e.k)}')">undo</button>`:'')+`</span>`;
+        +(isDaddy?`<button class="ach-btn warn" onclick="undoRedeem('${esc(e.k)}')">refund</button>`:'')+`</span>`;
       rd.appendChild(row);
     });
   }
