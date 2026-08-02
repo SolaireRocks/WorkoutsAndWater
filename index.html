@@ -1826,7 +1826,7 @@ window.subClaim = async function(id){
   const wk=weekKey(currentWeekStart); ensureWeekAch(wk);
   const cur=allData[wk].ach[id]||{};
   const claimed=!cur.claimed;
-  allData[wk].ach[id]={...cur, claimed, confirmed: claimed?cur.confirmed:false};
+  allData[wk].ach[id]={...cur, claimed, confirmed: claimed?!!cur.confirmed:false};
   render(); await writeWeek(wk, allData[wk]);
 };
 window.domConfirm = async function(id){
@@ -1834,7 +1834,7 @@ window.domConfirm = async function(id){
   const wk=weekKey(currentWeekStart); ensureWeekAch(wk);
   const cur=allData[wk].ach[id]||{};
   const confirmed=!cur.confirmed;
-  allData[wk].ach[id]={...cur, confirmed, claimed: confirmed?true:cur.claimed};
+  allData[wk].ach[id]={...cur, confirmed, claimed: confirmed?true:!!cur.claimed};
   render(); await writeWeek(wk, allData[wk]);
 };
 window.confirmWeekAll = async function(){
@@ -1851,7 +1851,7 @@ window.subClaimMonth = async function(id){
   const ym=ymOf(currentWeekStart);
   const cur=(monthsData[ym]&&monthsData[ym][id])||{};
   const claimed=!cur.claimed;
-  const next={...cur, claimed, confirmed: claimed?cur.confirmed:false};
+  const next={...cur, claimed, confirmed: claimed?!!cur.confirmed:false};
   sync('syncing');
   try { await set(ref(db,'months/'+ym+'/'+id), next); sync('synced'); }
   catch(e){ sync('error'); toast('save failed'); }
@@ -1861,7 +1861,7 @@ window.domConfirmMonth = async function(id){
   const ym=ymOf(currentWeekStart);
   const cur=(monthsData[ym]&&monthsData[ym][id])||{};
   const confirmed=!cur.confirmed;
-  const next={...cur, confirmed, claimed: confirmed?true:cur.claimed};
+  const next={...cur, confirmed, claimed: confirmed?true:!!cur.claimed};
   sync('syncing');
   try { await set(ref(db,'months/'+ym+'/'+id), next); sync('synced'); }
   catch(e){ sync('error'); toast('save failed'); }
@@ -1870,7 +1870,7 @@ window.subClaimOnce = async function(id){
   if(role==='daddy') return;
   const cur=onceData[id]||{};
   const claimed=!cur.claimed;
-  const next={...cur, claimed, confirmed: claimed?cur.confirmed:false};
+  const next={...cur, claimed, confirmed: claimed?!!cur.confirmed:false};
   sync('syncing');
   try { await set(ref(db,'oneshots/'+id), next); sync('synced'); }
   catch(e){ sync('error'); toast('save failed'); }
@@ -1879,7 +1879,7 @@ window.domConfirmOnce = async function(id){
   if(role!=='daddy') return;
   const cur=onceData[id]||{};
   const confirmed=!cur.confirmed;
-  const next={...cur, confirmed, claimed: confirmed?true:cur.claimed};
+  const next={...cur, confirmed, claimed: confirmed?true:!!cur.claimed};
   sync('syncing');
   try { await set(ref(db,'oneshots/'+id), next); sync('synced'); }
   catch(e){ sync('error'); toast('save failed'); }
