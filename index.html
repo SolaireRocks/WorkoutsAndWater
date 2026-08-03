@@ -271,6 +271,17 @@ body::before {
 .ach-mini-btn:hover:not(:disabled) { border-color: var(--border2); color: var(--text); background: var(--surface3); }
 .ach-mini-btn.del:hover:not(:disabled) { border-color: var(--red-border); color: var(--red); background: var(--red-dim); }
 .ach-mini-btn:disabled { opacity: 0.28; cursor: default; }
+/* REWARDS STORE EDITOR */
+.editor-head.rw { grid-template-columns: 1fr 84px 26px; }
+.editor-head.rw span:nth-child(2) { text-align: center; }
+.rw-edit-row {
+  display: grid; grid-template-columns: 1fr 84px 26px; gap: 6px 8px;
+  align-items: center; margin-bottom: 11px;
+  grid-template-areas: "name cost ctrl" "desc desc ctrl";
+}
+.rw-edit-row .j-rname { grid-area: name; }
+.rw-edit-row .j-cost { grid-area: cost; }
+.rw-edit-row .j-rdesc { grid-area: desc; font-size: 12px; }
 .comments-list { display: flex; flex-direction: column; gap: 7px; margin-top: 10px; max-height: 220px; overflow-y: auto; }
 .comment-bubble { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 9px 12px; position: relative; }
 .comment-bubble.deletable { padding-right: 34px; }
@@ -660,6 +671,29 @@ body::before {
         </div>
       </div>
 
+      <!-- Edit the rewards store: name, cost & description (collapsed by default) -->
+      <div class="card">
+        <div class="section-label collapse-hdr" id="d-rw-hdr" onclick="toggleCollapse('d-rw-hdr','d-rw-body')">
+          <span>🎁 Edit rewards store &mdash; name, cost &amp; description</span>
+          <span class="collapse-chev">▾</span>
+        </div>
+        <div id="d-rw-body" class="collapsible collapsed">
+          <div style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;line-height:1.6;margin-bottom:12px;">
+            These are what she can spend her points on. Use <strong>▲▼</strong> to reorder, <strong>✕</strong> to remove one. Already-redeemed history keeps its original name &amp; cost.
+          </div>
+          <div class="editor-head rw">
+            <span>Reward</span><span>Cost</span><span>Description</span>
+          </div>
+          <div id="rw-editor"></div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:4px;">
+            <button class="save-btn" onclick="addReward()">+ add reward</button>
+            <button class="save-btn" onclick="saveRewards()">save rewards</button>
+            <button class="save-btn" onclick="resetRewards()">reset to defaults</button>
+            <span style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;">changes sync to her store instantly</span>
+          </div>
+        </div>
+      </div>
+
       <!-- Edit weekly tally & fanfare (collapsed by default) -->
       <div class="card">
         <div class="section-label collapse-hdr" id="d-tally-hdr" onclick="toggleCollapse('d-tally-hdr','d-tally-body')">
@@ -891,7 +925,12 @@ const ACHIEVEMENTS = [
   { id:'lb50', group:'once', type:'manual', icon:'💎', points:600, name:'Down 50 lbs', desc:'Fifty pounds — incredible', crit:'one-time' },
   { id:'pop_forever', group:'once', type:'manual', icon:'🚭', points:500, name:'Quit Pop Forever', desc:'Gave up pop for good — no more, ever', crit:'one-time' },
 ];
-const REWARDS = [
+// ── REWARDS STORE ──────────────────────────────────────────────────
+// Defaults below are used until Daddy customizes the store from the
+// dashboard (add / edit / reorder / delete). Once customized, the whole
+// list lives in Firebase ('config/rewards' as { v:1, items:[…] }) and is
+// synced to both views. "Reset to defaults" clears it and brings these back.
+const DEFAULT_REWARDS = [
   { id:'r_task',  cost:100,  name:'Daddy Handles It',        desc:'Redeemable for ONE dreaded task (making a phone call, etc.)' },
   { id:'r_res1',  cost:300,  name:'The Reservoir (Lvl 1)',   desc:'Daddy agrees not to masturbate for 3 days.' },
   { id:'r_amz_s', cost:400,  name:'Amazon Wishlist (Small)', desc:'Daddy buys one item from your list (under $20).' },
@@ -900,6 +939,30 @@ const REWARDS = [
   { id:'r_fit',   cost:1400, name:'Fit Check',               desc:'We go to the mall and buy you an outfit (under $100 — more if it’s sexy enough).' },
   { id:'r_jewel', cost:3000, name:'The Bloodiest…',     desc:'Pick out a piece of jewelry that Daddy will buy for you (under $250).' },
 ];
+let REWARDS = DEFAULT_REWARDS.map(r=>({...r}));
+function newRewardId(){
+  return 'r_'+Date.now().toString(36)+Math.floor(Math.random()*46656).toString(36);
+}
+// Normalize whatever is stored (new { v:1, items } shape, a bare array, or a
+// Firebase object-of-indexes) into the live REWARDS list. A stored list wins
+// even when it's empty — only a missing config falls back to the defaults.
+function applyRewards(v){
+  let arr=null;
+  if(Array.isArray(v)) arr=v;
+  else if(v && typeof v==='object'){
+    if('items' in v || v.v){
+      const it=v.items;
+      arr = Array.isArray(it) ? it : (it && typeof it==='object' ? Object.values(it) : []);
+    } else arr=Object.values(v);
+  }
+  if(!arr){ REWARDS=DEFAULT_REWARDS.map(r=>({...r})); return; }
+  REWARDS = arr.filter(Boolean).map((r,i)=>({
+    id:   String(r.id || ('r_'+i)),
+    name: String(r.name!=null&&r.name!=='' ? r.name : 'Reward'),
+    desc: String(r.desc==null ? '' : r.desc),
+    cost: Math.max(0, parseInt(r.cost,10)||0),
+  }));
+}
 
 // Per-achievement point values are editable by Daddy from the dashboard.
 // Defaults live in ACHIEVEMENTS above; live overrides are stored in
@@ -1102,6 +1165,10 @@ function startListening() {
     // Point/meta overrides target achievement objects; re-apply after the
     // list is rebuilt so restored/reordered items keep their values.
     applyAchPoints(achPoints); applyAchMeta(achMeta);
+    render();
+  });
+  onValue(ref(db,'config/rewards'), snap=>{
+    applyRewards(snap.val());
     render();
   });
   onValue(ref(db,'config/tally'), snap=>{
@@ -1551,6 +1618,102 @@ window.resetAchPoints = async function() {
   } catch(e){ sync('error'); toast('save failed'); }
 };
 
+// ── REWARDS STORE EDITOR (daddy only) ──
+function renderRewardEditor(){
+  const c=document.getElementById('rw-editor');
+  if(!c) return;
+  c.innerHTML='';
+  if(!REWARDS.length){
+    c.innerHTML='<div style="font-size:12px;color:var(--text3);font-family:\'DM Mono\',monospace;">no rewards yet — tap &ldquo;add reward&rdquo; below</div>';
+    return;
+  }
+  REWARDS.forEach((r,i)=>{
+    const row=document.createElement('div');
+    row.className='rw-edit-row';
+    row.dataset.id=r.id;
+    const upDis=i===0?'disabled':'', downDis=i===REWARDS.length-1?'disabled':'';
+    row.innerHTML=
+      `<input class="editor-input j-rname" value="${esc(r.name)}" placeholder="reward name" aria-label="reward name">`+
+      `<input class="editor-input num j-cost" type="number" min="0" max="100000" step="25" value="${parseInt(r.cost,10)||0}" aria-label="cost in points for ${esc(r.name)}">`+
+      `<input class="editor-input j-rdesc" value="${esc(r.desc)}" placeholder="what she gets" aria-label="description for ${esc(r.name)}">`+
+      `<span class="ach-edit-ctrl">`+
+        `<button class="ach-mini-btn" ${upDis} onclick="moveReward('${r.id}',-1)" aria-label="move up" title="move up">▲</button>`+
+        `<button class="ach-mini-btn" ${downDis} onclick="moveReward('${r.id}',1)" aria-label="move down" title="move down">▼</button>`+
+        `<button class="ach-mini-btn del" onclick="deleteReward('${r.id}')" aria-label="delete" title="delete">✕</button>`+
+      `</span>`;
+    c.appendChild(row);
+  });
+}
+
+// Pull any in-progress text edits out of the visible rows into REWARDS, so
+// structural changes (add / reorder / delete) never discard them.
+function harvestRewardRows(){
+  const byId={}; REWARDS.forEach(r=>{ byId[r.id]=r; });
+  document.querySelectorAll('#rw-editor .rw-edit-row').forEach(row=>{
+    const r=byId[row.dataset.id]; if(!r) return;
+    const n=row.querySelector('.j-rname'), c=row.querySelector('.j-cost'), d=row.querySelector('.j-rdesc');
+    if(n) r.name=n.value.trim()||r.name;
+    if(c) r.cost=Math.max(0, parseInt(c.value,10)||0);
+    if(d) r.desc=d.value.trim();
+  });
+}
+
+async function persistRewards(msg){
+  harvestRewardRows();
+  const items=REWARDS.map(r=>({ id:r.id, name:r.name, cost:r.cost, desc:r.desc||'' }));
+  sync('syncing');
+  try {
+    await set(ref(db,'config/rewards'), { v:1, items });
+    render(); renderRewardEditor();
+    sync('synced');
+    if(msg) toast(msg, true);
+    return true;
+  } catch(e){ sync('error'); toast('save failed'); return false; }
+}
+
+window.saveRewards = function(){ return persistRewards('rewards saved'); };
+
+window.addReward = async function(){
+  harvestRewardRows();
+  const id=newRewardId();
+  REWARDS.push({ id, name:'New reward', cost:100, desc:'' });
+  if(await persistRewards('reward added')){
+    const el=document.querySelector('#rw-editor .rw-edit-row[data-id="'+id+'"] .j-rname');
+    if(el){ el.focus(); el.select(); }
+  }
+};
+
+window.moveReward = async function(id, dir){
+  const idx=REWARDS.findIndex(r=>r.id===id);
+  if(idx<0) return;
+  const j=idx+dir;
+  if(j<0 || j>=REWARDS.length) return;
+  harvestRewardRows();
+  const t=REWARDS[idx]; REWARDS[idx]=REWARDS[j]; REWARDS[j]=t;
+  await persistRewards();
+};
+
+window.deleteReward = async function(id){
+  const r=REWARDS.find(x=>x.id===id);
+  if(!confirm('Delete "'+((r&&r.name)||'this reward')+'" from the store?\nAlready-redeemed history is not affected.')) return;
+  harvestRewardRows();
+  const idx=REWARDS.findIndex(x=>x.id===id);
+  if(idx>=0) REWARDS.splice(idx,1);
+  await persistRewards('reward deleted');
+};
+
+window.resetRewards = async function(){
+  if(!confirm('Reset the rewards store back to the original list?\nYour custom rewards will be removed.')) return;
+  sync('syncing');
+  try {
+    await remove(ref(db,'config/rewards'));
+    REWARDS=DEFAULT_REWARDS.map(r=>({...r}));
+    render(); renderRewardEditor();
+    sync('synced');
+    toast('reset to defaults', true);
+  } catch(e){ sync('error'); toast('save failed'); }
+};
+
 // Collapsible week-by-week history (collapsed on load).
 window.toggleHistory = function(){
   const body=document.getElementById('d-history');
@@ -1653,6 +1816,8 @@ function render() {
   if(!ed.contains(document.activeElement)) renderEditor();
   const ape=document.getElementById('ach-editor');
   if(!ape.contains(document.activeElement)) renderAchEditor();
+  const rwe=document.getElementById('rw-editor');
+  if(rwe && !rwe.contains(document.activeElement)) renderRewardEditor();
   const tle=document.getElementById('tally-editor');
   if(tle && !tle.contains(document.activeElement)) renderTallyEditor();
 
